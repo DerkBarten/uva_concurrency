@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "omp.h"
 
 #include "simulate.h"
 
@@ -40,9 +41,14 @@ double *simulate(const int i_max, const int t_max, const int num_threads,
 {
     /*
      * Your implementation should go here.
-     */
-    for (int i = 0; i < t_max; i++) {
-        for (int j = 0; j < i_max; j++){
+     */ 
+     int i,j; 
+
+    
+    omp_set_num_threads(num_threads); // set the number of threads omp will create
+    #pragma omp parallel for private(j)  // j is private to the inner loop
+    for (i = 0; i < t_max; i++) {
+        for (j = 0; j < i_max; j++){
             next_array[j] = wave(old_array, current_array, j, i_max);
         }
     }
