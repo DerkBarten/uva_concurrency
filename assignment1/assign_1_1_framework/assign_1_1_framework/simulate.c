@@ -11,13 +11,16 @@
 #include "simulate.h"
 
 
+#ifdef DEBUG
+# define DEBUG_PRINT(x) printf x
+#else
+# define DEBUG_PRINT(x)
+#endif
+
 /* Add any global variables you may need. */
 double WAVE_C = 0.15; 
 
 typedef struct ThreadArgs{
-    double *old_array;
-    double *current_array;
-    double *next_array;
     int start;
     int end;
     int i_max;
@@ -27,13 +30,17 @@ typedef struct ThreadArgs{
 } ThreadArgs;
 
 int counter = 0;
+
+double *old_array;
+double *current_array;
+double *next_array;
+
 pthread_mutex_t mutex;
-pthread_mutex_t mutex_main;
 pthread_cond_t sync_cond;
 pthread_cond_t count_cond;
 
 /* Add any functions you may need (like a worker) here. */
-double wave(double *old_array, double *current_array, int i, int i_max) {
+double wave(int i, int i_max) {
     // Both endpoints are always zero
     if (i == 0 || i == i_max - 1){
         return 0;
@@ -48,26 +55,26 @@ void* worker(void* pargs) {
     // Cast the void pointer back to an argument pointer
     ThreadArgs* args = (ThreadArgs*) pargs; 
 
-    double* old_array = args->old_array;
-    double* current_array = args->current_array;
-    double* next_array = args->next_array;
-
     for (int i = 0; i < args->t_max; i++) {
-        printf("Thread %i starts cycle %i\n", args->thread_number, i);
+        DEBUG_PRINT(("Thread %i starts cycle %i\n", args->thread_number, i));
+
         for (int j = args->start; j < args->end; j++){
-            next_array[j] = wave(old_array, current_array, j, args->i_max);
+            next_array[j] = wave(j, args->i_max);
         }
         pthread_mutex_lock(&mutex);
         counter++;
         if (counter == args->num_threads) {
             pthread_cond_broadcast(&count_cond);
-            printf("I send the signal: %i\n", args->thread_number);
+            DEBUG_PRINT(("I send the signal: %i\n", args->thread_number));
+            // race condition, main might send sync_cond before thread reaches the wait, making this thread stuck
         }
+
         // wait for every other thread to finish
-        printf("Thread %i ended cycle %i\n", args->thread_number, i);
+        DEBUG_PRINT(("Thread %i ended cycle %i, cnt: %i\n", args->thread_number, i, counter));
         pthread_cond_wait(&sync_cond, &mutex);
+        pthread_mutex_unlock(&mutex);
     }
-    printf("Thread %i exited\n", args->thread_number);
+    DEBUG_PRINT(("Thread %i exited\n", args->thread_number));
     // Free the malloc before we exit
     free(args);
     pthread_exit(0);
@@ -86,25 +93,37 @@ void* worker(void* pargs) {
  * next_array: array of size i_max. You should fill this with t+1
  */
 double *simulate(const int i_max, const int t_max, const int num_threads,
-        double *old_array, double *current_array, double *next_array)
+        double *old_array_, double *current_array_, double *next_array_)
 {
-    // num_threads - 1 full threads, 1 leftover thread
-    int chunk_size = i_max / (num_threads - 1);
-    int leftover = i_max % (num_threads - 1);
+    old_array = old_array_;
+    current_array = current_array_;
+    next_array = next_array_;
 
     pthread_mutex_init(&mutex, NULL);
-    pthread_mutex_init(&mutex_main, NULL);
     pthread_cond_init(&sync_cond, NULL);
     pthread_cond_init(&count_cond, NULL);
 
-    printf("chunck size: %i leftover: %i\n", chunk_size, leftover);
+    int chunk_size;
+    int leftover;
+    if (num_threads > 1) {
+        // num_threads - 1 full threads, 1 leftover thread
+        chunk_size = i_max / (num_threads - 1);
+        leftover = i_max % (num_threads - 1);
+    }
+    else {
+        chunk_size = 0;
+        leftover = i_max;
+    }
+
+    
+
+    DEBUG_PRINT(("chunck size: %i leftover: %i\n", chunk_size, leftover));
+
+    pthread_mutex_lock(&mutex);
 
     pthread_t tid[num_threads];
     for (int i = 0; i < num_threads - 1; i++) {
         ThreadArgs *args = (ThreadArgs *)malloc(sizeof(ThreadArgs));
-        args->old_array = old_array;
-        args->current_array = current_array;
-        args->next_array = next_array;
         args->start = i * chunk_size;
         args->end = (i + 1) * chunk_size;
         args->i_max = i_max;
@@ -112,44 +131,48 @@ double *simulate(const int i_max, const int t_max, const int num_threads,
         args->num_threads = num_threads;
         args->thread_number = i;
 
+        DEBUG_PRINT(("Thread %i: start=%i end=%i\n", i, args->start, args->end));
         // We need to cast the argument pointer to a void pointer
         pthread_create(&tid[i], NULL, worker, (void *)args);
         
     }
     // Create a leftover thread here
     ThreadArgs *args = (ThreadArgs *)malloc(sizeof(ThreadArgs));
-    args->old_array = old_array;
-    args->current_array = current_array;
-    args->next_array = next_array;
-    args->start = num_threads * chunk_size;
-    args->end = (num_threads * chunk_size) + leftover;
+    args->start = (num_threads - 1) * chunk_size;
+    args->end = (num_threads - 1) * chunk_size + leftover;
     args->i_max = i_max;
     args->t_max = t_max;
     args->num_threads = num_threads;
     args->thread_number = num_threads - 1;
+
+    DEBUG_PRINT(("Thread leftover: start=%i end=%i\n", args->start, args->end));
     pthread_create(&tid[num_threads - 1], NULL, worker, (void *)args);
 
     for (int i = 0; i < t_max; i++) {
-        pthread_mutex_lock(&mutex_main);
-        printf("Main waits for next cycle signal\n");
-        pthread_cond_wait(&count_cond, &mutex_main);
-        printf("Main received signal\n");
+        DEBUG_PRINT(("Main waits for next cycle signal\n"));
+        pthread_cond_wait(&count_cond, &mutex);
+        DEBUG_PRINT(("Main received signal\n"));
+        pthread_mutex_unlock(&mutex);
+        pthread_mutex_lock(&mutex);
         counter = 0;
         // Swap arrays around
-        printf("Swapping arrays around\n");
+        DEBUG_PRINT(("Swapping arrays around\n"));
         double *temp = old_array;
         old_array = current_array;
         current_array = next_array;
         next_array = temp;
         pthread_cond_broadcast(&sync_cond);
-        printf("Main sent continue broadcast\n");
+        DEBUG_PRINT(("Main sent continue broadcast\n"));
+
     }
-    printf("Main exited loop\n");
+    DEBUG_PRINT(("Main exited loop\n"));
+    pthread_mutex_unlock(&mutex);
     // Wait for all threads to end
-    for (int i = 0; i <= num_threads; i++) {
+    for (int i = 0; i < num_threads; i++) {
         pthread_join(tid[i], NULL);
     }
     
+    DEBUG_PRINT(("All is done\n"));
     /* You should return a pointer to the array with the final results. */
     return current_array;
 }
