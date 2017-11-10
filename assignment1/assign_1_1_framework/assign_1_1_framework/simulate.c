@@ -10,6 +10,7 @@
 
 #include "simulate.h"
 
+//# define DEBUG
 
 #ifdef DEBUG
 # define DEBUG_PRINT(x) printf x
@@ -66,7 +67,6 @@ void* worker(void* pargs) {
         if (counter == args->num_threads) {
             pthread_cond_broadcast(&count_cond);
             DEBUG_PRINT(("I send the signal: %i\n", args->thread_number));
-            // race condition, main might send sync_cond before thread reaches the wait, making this thread stuck
         }
 
         // wait for every other thread to finish
@@ -115,10 +115,9 @@ double *simulate(const int i_max, const int t_max, const int num_threads,
         leftover = i_max;
     }
 
-    
-
     DEBUG_PRINT(("chunck size: %i leftover: %i\n", chunk_size, leftover));
 
+    // Lock because we don't want the threads to finish before main is ready to listen
     pthread_mutex_lock(&mutex);
 
     pthread_t tid[num_threads];
@@ -152,10 +151,7 @@ double *simulate(const int i_max, const int t_max, const int num_threads,
         DEBUG_PRINT(("Main waits for next cycle signal\n"));
         pthread_cond_wait(&count_cond, &mutex);
         DEBUG_PRINT(("Main received signal\n"));
-        pthread_mutex_unlock(&mutex);
-        pthread_mutex_lock(&mutex);
         counter = 0;
-        // Swap arrays around
         DEBUG_PRINT(("Swapping arrays around\n"));
         double *temp = old_array;
         old_array = current_array;
