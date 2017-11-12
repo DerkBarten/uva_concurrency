@@ -44,10 +44,11 @@ double *simulate(const int i_max, const int t_max, const int num_threads,
      */ 
      int i,j; 
     omp_set_num_threads(num_threads); // set the number of threads omp will create
-    #pragma omp parallel for private(i,j) firstprivate(old_array, current_array, next_array)  // j is private to the inner loop
+    #pragma omp parallel for private(i,j) firstprivate(old_array, current_array, next_array) if(t_max >= 20000) // j is private to the inner loop
+    // experiment with differnt scheduling
     for (i = 0; i < t_max; i++) {
         for (j = 0; j < i_max; j++){
-            next_array[j] = wave(old_array, current_array, j, i_max);
+            next_array[j] = wave(old_array, current_array, j, i_max);   
         }
     }
 
