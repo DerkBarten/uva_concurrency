@@ -2,95 +2,124 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#include "queue.c"
+#include "main.h"
 
+# define BATCH 100
 
 /*
 TODO's:
 
-- The inboundqueue GeneratorThread and the FilterThread shouldn't be ints but should be 'queue'-structs,
-- Also change every placeholder throughout the code where the incorrect object is used.
-- Add an boolean to the FilterThread which indicates if it has already created a new thread
-- Threads in main are now created with pid's, but don't know if this wat is correct 
-- Set the inbound-queue of the First FilterThread to the outbound-queue of the Generator Thread
-
 - Check if the generate number function works
-
-
+- Every queue should have a mutex and cond value
 - This whole beast should be made threadsafe
 
 */
 
-typedef struct GeneratorThread{
-    int start_value;
-    // change to correct struct
-    // this linked list is also the outbound queue
-    int outbound_queue;
-} GeneratorThread;
-
-typedef struct FilterThread{
-    // pointer to outputqueue
-    int associated_prime = 0
-    // every thread needs a pointer to the inboundqueu
-    int inbound_queue 
-} FilterThread;
 
 
 int main(int argc, char *argv[]){
+    struct queue outbound_queue;
+    outbound_queue.first = NULL;
+    outbound_queue.last = NULL;
+    int value = 2;
 
-    // change later, such that each filterthread also gets an ID
-    pthread_t tid[10];
-    // create thread for generateor
-    GeneratorThread *generator = (GeneratorThread *)malloc(sizeof(GeneratorThread));
-    generator->start_value = 2;
-    generator->linked_list = 0;
+    pthread_mutex_t out_mutex;
+    pthread_cond_t out_cond;
+    pthread_mutex_init(&out_mutex, NULL);
+    pthread_cond_init(&out_cond, NULL);
 
-    // creat generateor thread, what should ID be
-    pthread_create(&tid[0], NULL, generate_numbers, (void *)args);
+    FilterArgs filter_args;
+    filter_args.associated_prime = value;
+    filter_args.inbound_queue = &outbound_queue;
+    filter_args.in_mutex = &out_mutex;
+    filter_args.in_cond = &out_cond;
+    create_filter(&filter_args);
+    
 
-    // create the first FilterThread whith associated_value:2
-    // should point to the queueu of the generator thread
-    FilterThread *filter = (FilterThread *)malloc(sizeof(FilterThread));
-    filter->associated_prime = 2;
-    filter->inbound = generator->outbound_queue;
-    // set the associated_prime of each number
-    // set the inbound_queue of this thread
-    pthread_create(&tid[1], NULL, filterNumbers, (void *)args);
-}
-
-// this function will generate the functions for the generateor-thread
-void* generate_numbers(void* pargs) {
-    GeneratorThread* generator = (GeneratorThread*) pargs;
-    while(true) {
-        push(linkedlist, startvalue)
-        generator->start_value += 1
+    while (1) {
+        pthread_mutex_lock(&out_mutex);
+        int send_signal = !is_empty(&outbound_queue);
+        int limit = value + BATCH;
+        
+        for (; value < limit; value++) {            
+            push(&outbound_queue, value);      
+        }
+        // Send a signal that the thread may continue
+        if (send_signal) {
+            pthread_cond_broadcast(&out_cond);
+        }
+        pthread_mutex_unlock(&out_mutex);
     }
 }
 
-// this function will generate the functions for the generateor-thread
-void* filter_numbers(void* pargs) {
-    FilterThread* filter = (FilterThread*) pargs;
-    int has_created = 0
-    int x = filter.associated_prime;
-    
-    // create  the outboundqueue
-    struct queue *outbound_queue = malloc(sizeof(struct queue))
+void create_filter(FilterArgs *filter_args) {
+    pthread_t *filter_tid = (pthread_t *)malloc(sizeof(pthread_t));
+    pthread_create(filter_tid, NULL, filter, (void *)filter_args);
+}
 
-    while(!isEmpty(outbound_queue)) {
-        int value = pop(outbound_queue)
-        if(value % x == 0) continue;
-        else {
-            if (!has_created) {
-                FilterThread *args = (FilterThread *)malloc(sizeof(FilterThread));
-                args->associated_prime = value;
-                args->inbound = outbound_queue;
-                // create a valid thread_id
-                pthread_create(&tid[1], NULL, filterNumbers, (void *)args);
-                has_created = 1;
-            } else {
-                // write to the outboundqueue
-                push(outbound_queue, value)
+void *filter(void* pargs) {
+    FilterArgs* filter_args = (FilterArgs*) pargs;
+    int has_created = 0;
+    struct queue* inbound_queue = filter_args->inbound_queue;
+    int prime = filter_args->associated_prime;
+    pthread_mutex_t *in_mutex = filter_args->in_mutex; 
+    pthread_cond_t *in_cond = filter_args->in_cond;
+
+    // create a new queue on the stack
+    struct queue outbound_queue;
+    outbound_queue.first = NULL;
+    outbound_queue.last = NULL;
+    int value;
+
+    pthread_mutex_t out_mutex;
+    pthread_cond_t out_cond;
+    pthread_mutex_init(&out_mutex, NULL);
+    pthread_cond_init(&out_cond, NULL);
+
+    while (1) {
+        pthread_mutex_lock(in_mutex);
+        if (!is_empty(inbound_queue)) {
+            value = pop(inbound_queue);
+            pthread_mutex_unlock(in_mutex);
+            if (value == -1) {
+                printf("Error encountered in pop\n");
+                exit(1);
             }
+        }
+        else {
+            // Wait for inbound to have a value again
+            pthread_cond_wait(in_cond, in_mutex);
+            pthread_mutex_unlock(in_mutex);
+            continue;
+        }
+
+        // If the number is dividable, discard
+        if (value % prime == 0)
+            continue;
+        else {
+            // Check if the filter is at the end of the chain
+            if (!has_created) {
+                FilterArgs new_filter_args;
+                new_filter_args.associated_prime = value;
+                new_filter_args.inbound_queue = &outbound_queue;
+                new_filter_args.in_mutex = &out_mutex;
+                new_filter_args.in_cond = &out_cond;
+
+                printf("%i ", value);
+                fflush(stdout);
+                create_filter(&new_filter_args);
+                has_created = 1;
+            }
+            // write to the outbound queue
+            pthread_mutex_lock(&out_mutex);
+            if (is_empty(&outbound_queue)) {
+                push(&outbound_queue, value);
+                pthread_cond_broadcast(&out_cond);
+            }
+            else {
+                push(&outbound_queue, value);
+            }
+            pthread_mutex_unlock(&out_mutex);
         }
     }
 }

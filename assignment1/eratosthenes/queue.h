@@ -14,3 +14,5 @@ int push(struct queue *queue, int value);
 int pop(struct queue *queue);
 
 int print_queue(struct queue *queue);
+
+int is_empty(struct queue *queue);
