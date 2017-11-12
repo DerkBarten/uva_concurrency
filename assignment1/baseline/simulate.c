@@ -6,7 +6,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "omp.h"
 
 #include "simulate.h"
 
@@ -16,12 +15,12 @@ double WAVE_C = 0.15;
 double wave(double *old_array, double *current_array, int i, int i_max) {
     // Both endpoints are always zero
     if (i == 0 || i == i_max - 1){
-        return 0;
+        return 0.0;
     }
-    // Can threads read same memory address at the same time?
-    return 2 * current_array[i] - old_array[i] + 
+
+    return 2.0 * current_array[i] - old_array[i] + 
            WAVE_C * (current_array[i - 1] - 
-           (2 * current_array[i] - current_array[i + 1]));
+           (2.0 * current_array[i] - current_array[i + 1]));
 }
 
 /*
@@ -41,14 +40,43 @@ double *simulate(const int i_max, const int t_max, const int num_threads,
 {
     /*
      * Your implementation should go here.
-     */ 
-     int i,j; 
-    omp_set_num_threads(num_threads); // set the number of threads omp will create
-    #pragma omp parallel for private(i,j) firstprivate(old_array, current_array, next_array)  // j is private to the inner loop
-    for (i = 0; i < t_max; i++) {
-        for (j = 0; j < i_max; j++){
+     */
+    /*
+    for (int j = 0; j < i_max; j++){
+        printf("o%i %f\n",j,old_array[j]);
+    }
+    for (int j = 0; j < i_max; j++){
+        printf("c%i %f\n",j,current_array[j]);
+    }
+    for (int j = 0; j < i_max; j++){
+        next_array[j] = wave(old_array, current_array, j, i_max);
+    }
+    for (int j = 0; j < i_max; j++){
+        printf("n%i %f\n",j,next_array[j]);
+    }
+    */
+
+    for (int i = 0; i < t_max; i++) {
+        for (int j = 0; j < i_max; j++){
             next_array[j] = wave(old_array, current_array, j, i_max);
         }
+        /*
+        printf("before:\n");
+        printf("old: %p\n", old_array);
+        printf("cur: %p\n", current_array);
+        printf("nex: %p\n", next_array);
+        */
+        double *temp = old_array;
+        old_array = current_array;
+        current_array = next_array;
+        next_array = temp;
+
+        /*
+        printf("after:\n");
+        printf("old: %p\n", old_array);
+        printf("cur: %p\n", current_array);
+        printf("nex: %p\n", next_array);
+        */
     }
 
     return current_array;
