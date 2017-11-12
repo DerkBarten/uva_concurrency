@@ -1,3 +1,5 @@
+// Simple implementation of a linked list
+
 struct queue {
     struct queue_entry *first;
     struct queue_entry *last;
