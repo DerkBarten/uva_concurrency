@@ -1,0 +1,6 @@
+Build command: make
+
+Usage:
+./eratosthenes [limit] [batch_size]
+limit: how many primes are generated (default: infinite) 
+batch_size: how many numbers the generator generates at once (default: 1)

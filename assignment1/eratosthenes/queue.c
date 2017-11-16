@@ -57,3 +57,10 @@ int print_queue(struct queue *queue){
     printf("%i\n", current_entry->value);
     return 0;
 }
+
+int is_empty(struct queue *queue) {
+    if (queue->first == NULL) {
+        return 1;
+    }
+    return 0;
+}
