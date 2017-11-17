@@ -13,18 +13,24 @@
 
 
 /* Add any global variables you may need. */
+double *my_old_array;
+double *my_current_array;
+double *my_next_array;
 
 
-/* Add any functions you may need (like a worker) here. */
-double wave(int i, int i_max) {
-    // Both endpoints are always zero
-    if (i == 0 || i == i_max - 1){
-        return 0;
-    }
+// Assume the caller avoids segmentations errors
+double wave(int i) {
     // Can threads read same memory address at the same time?
-    return 2 * current_array[i] - old_array[i] + 
-           WAVE_C * (current_array[i - 1] - 
-           (2 * current_array[i] - current_array[i + 1]));
+    return 2 * my_current_array[i] - my_old_array[i] + 
+           0.15 * (my_current_array[i - 1] - 
+           (2 * my_current_array[i] - my_current_array[i + 1]));
+}
+
+void buffer_swap() {
+    double *temp = my_old_array;
+    my_old_array = my_current_array;
+    my_current_array = my_next_array;
+    my_next_array = temp;
 }
 
 /*
@@ -41,42 +47,90 @@ double wave(int i, int i_max) {
 double *simulate(const int i_max, const int t_max, double *old_array,
         double *current_array, double *next_array)
 {
-    double left_current;
-    double right_current;
-
     int numtasks, rank;
     MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     MPI_Request reqs[4];
 
-    int left_neighbor = rank - 1 ;
-    int right_neighbor = rank + 1;
+    int left_neighbor_rank = rank - 1 ;
+    int right_neighbor_rank = rank + 1;
 
     int array_normal_length = i_max / (numtasks - 1);
     int array_leftover_length = i_max % (numtasks - 1); 
 
-    double *my_old_array = old_array + rank * array_normal_length;
-    double *my_current_array = current_array + rank * array_normal_length;
-    double *my_next_array = next_array + rank * array_normal_length;
+    my_old_array = old_array + rank * array_normal_length;
+    my_current_array = current_array + rank * array_normal_length;
+    my_next_array = next_array + rank * array_normal_length;
 
-    if (left_neighbor > 0 && right_neighbor < numtasks) {
-        // somewhere in the middle
-        // send to process left
-        MPI_FLOAT left = my_current_array[0];
-        MPI_FLOAT right = my_current_array[array_normal_length - 1]
-        // TODO: check tags
-        MPI_ISend(&left, 1, MPI_FLOAT, left_neighbor, 1, MPI_COMM_WORLD, &reqs[0]);
-        MPI_ISend(&right, 1, MPI_FLOAT, right_neighbor, 2, MPI_COMM_WORLD, &reqs[1]);
+    MPI_FLOAT my_left = my_current_array[0];
+    MPI_FLOAT my_right = my_current_array[array_normal_length - 1];
 
-        // wait for left and right
-        MPI_Recv();
-        MPI_Recv();
+    MPI_FLOAT left_neighbor_float;
+    MPI_FLOAT right_neighbor_float;
+
+    // The parts somewhere in the middle
+    if (left_neighbor_rank >= 0 && right_neighbor_rank < numtasks) {
+        for (int t = 0; t < t_max; t++) {
+            MPI_ISend(&my_left, 1, MPI_FLOAT, left_neighbor_rank, 1, MPI_COMM_WORLD, &reqs[0]);
+            MPI_ISend(&my_right, 1, MPI_FLOAT, right_neighbor_rank, 2, MPI_COMM_WORLD, &reqs[1]);
+
+            for (int i = 1; i < array_normal_length - 2; i++) {
+                next_array[i] = wave(i);
+            }
+
+            // The tags are switched around since left/right is relative
+            MPI_Recv(&left_neighbor_float, 1, MPI_FLOAT, left_neighbor_rank, 2, MPI_COMM_WORLD, &reqs[2]);
+            MPI_Recv(&right_neighbor_float, 1, MPI_FLOAT, right_neighbor_rank, 1, MPI_COMM_WORLD, &reqs[3]);
+
+            my_current_array[0] = left_neighbor_float;
+            my_current_array[array_normal_length - 1] = right_neighbor_float;
+
+            next_array[0] = wave(0);
+            next_array[array_normal_length - 1] = wave(array_normal_length - 1);
+
+            buffer_swap();
+        }
+        
+    }
+    // The left most part
+    else if (left_neighbor_rank < 0) {
+        for (int t = 0; t < t_max; t++) {
+            MPI_ISend(&my_right, 1, MPI_FLOAT, right_neighbor_rank, 2, MPI_COMM_WORLD, &reqs[1]);
+            
+            for (int i = 1; i < array_normal_length - 2; i++) {
+                next_array[i] = wave(i);
+            }
+
+            MPI_Recv(&right_neighbor_float, 1, MPI_FLOAT, right_neighbor_rank, 1, MPI_COMM_WORLD, &reqs[3]);
+
+            my_current_array[0] = 0.0;
+            my_current_array[array_normal_length - 1] = right_neighbor_float;
+            
+            next_array[0] = 0.0;
+            next_array[array_normal_length - 1] = wave(array_normal_length - 1);
+        }
 
     }
-    /*
-     * Your implementation should go here.
-     */
+    // The right most part
+    else if (right_neighbor_rank >= numtasks) {
+        for (int t = 0; t < t_max; t++) {
+
+            MPI_ISend(&my_left, 1, MPI_FLOAT, left_neighbor_rank, 1, MPI_COMM_WORLD, &reqs[0]);
+            
+            for (int i = 1; i < array_normal_length - 2; i++) {
+                next_array[i] = wave(i);
+            }
+
+            MPI_Recv(&left_neighbor_float, 1, MPI_FLOAT, left_neighbor_rank, 2, MPI_COMM_WORLD, &reqs[2]);
+
+            my_current_array[array_normal_length - 1] = 0.0;
+            my_current_array[0] = left_neighbor_float;
+
+            next_array[0] = wave(0);
+            next_array[array_normal_length - 1] = 0.0;
+        }         
+    }
 
     /* You should return a pointer to the array with the final results. */
     return current_array;
