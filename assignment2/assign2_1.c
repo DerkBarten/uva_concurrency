@@ -136,7 +136,10 @@ int main(int argc, char *argv[])
     printf("Took %g seconds\n", time);
     printf("Normalized: %g seconds\n", time / (1. * i_max * t_max));
 
-    file_write_double_array("result.txt", ret, i_max);
+    // Only let rank 0 write to the file
+    if (ret != NULL) {
+        file_write_double_array("result.txt", ret, i_max);
+    }
 
     free(old);
     free(current);
