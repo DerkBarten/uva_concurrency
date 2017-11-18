@@ -66,17 +66,25 @@ double *simulate(const int i_max, const int t_max, double *old_array,
     int left_neighbor_rank = rank - 1 ;
     int right_neighbor_rank = rank + 1;
     int array_length;
-    int array_leftover; // TODO: what if leftover is zero?
-    // TODO only do leftover if not divisible
+    int array_leftover;
 
     // If there is just one task
+    array_leftover = 0;
     if (numtasks == 1) {
         array_length = i_max;
     }
-    else{
-        array_length = i_max / (numtasks - 1);
+    // If the tasks are well dividable
+    else if (i_max % numtasks == 0) {
+        array_length = i_max / numtasks;
+        array_leftover = array_length;
     }
-    array_leftover = i_max % (numtasks - 1);
+    // If the tasks cannot be well divided
+    else {
+        array_length = i_max / numtasks;
+        array_leftover = i_max - (numtasks - 1) * array_length;
+        printf("array length: %i\n", array_length);
+        printf("leftover length: %i\n", array_leftover);
+    }
 
     // Calculate where the arrays should point
     my_old_array = old_array + rank * array_length;
@@ -100,36 +108,8 @@ double *simulate(const int i_max, const int t_max, double *old_array,
         MPI_Finalize();
         return my_current_array;
     }
-    // The chunks that are not at the edges
-    else if (left_neighbor_rank >= 0 && right_neighbor_rank < numtasks) {
-        printf("rank: %i\n", rank);
-        for (int t = 0; t < t_max; t++) {
-            MPI_Isend(&my_left, 1, MPI_FLOAT, left_neighbor_rank, 1, MPI_COMM_WORLD, &reqs[0]);
-            MPI_Isend(&my_right, 1, MPI_FLOAT, right_neighbor_rank, 2, MPI_COMM_WORLD, &reqs[1]);
-
-            for (int i = 1; i < array_length - 1; i++) {
-                my_next_array[i] = wave(i);
-            }
-
-            MPI_Recv(&left_neighbor_float, 1, MPI_FLOAT, left_neighbor_rank, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            MPI_Recv(&right_neighbor_float, 1, MPI_FLOAT, right_neighbor_rank, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
-            my_current_array[0] = left_neighbor_float;
-            my_current_array[array_length - 1] = right_neighbor_float;
-
-            my_next_array[0] = wave(0);
-            my_next_array[array_length - 1] = wave(array_length - 1);
-
-            buffer_swap();
-        }
-        MPI_Isend(my_current_array, array_length, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, &reqs[2]);
-        printf("%i: sent my chunk\n", rank);
-        fflush(stdout); 
-    }
     // The right most chunk
-    else if (right_neighbor_rank >= numtasks) {
-        printf("rank: %i\n", rank);
-        
+    else if (rank == numtasks - 1) {
         for (int t = 0; t < t_max; t++) {
 
             MPI_Isend(&my_left, 1, MPI_FLOAT, left_neighbor_rank, 1, MPI_COMM_WORLD, &reqs[0]);
@@ -153,8 +133,7 @@ double *simulate(const int i_max, const int t_max, double *old_array,
         fflush(stdout); 
     }
     // The left most chunk
-    else if (left_neighbor_rank < 0) {
-        printf("rank: %i\n", rank);
+    else if (rank == 0) {
         for (int t = 0; t < t_max; t++) {
             MPI_Isend(&my_right, 1, MPI_FLOAT, right_neighbor_rank, 2, MPI_COMM_WORLD, &reqs[0]);
             
@@ -184,6 +163,33 @@ double *simulate(const int i_max, const int t_max, double *old_array,
         MPI_Finalize();
         return current_array;
     }
+     // The chunks that are not at the edges
+    else {
+        printf("Im a middle chunk: %i\n", rank);
+        for (int t = 0; t < t_max; t++) {
+            MPI_Isend(&my_left, 1, MPI_FLOAT, left_neighbor_rank, 1, MPI_COMM_WORLD, &reqs[0]);
+            MPI_Isend(&my_right, 1, MPI_FLOAT, right_neighbor_rank, 2, MPI_COMM_WORLD, &reqs[1]);
+
+            for (int i = 1; i < array_length - 1; i++) {
+                my_next_array[i] = wave(i);
+            }
+
+            MPI_Recv(&left_neighbor_float, 1, MPI_FLOAT, left_neighbor_rank, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            MPI_Recv(&right_neighbor_float, 1, MPI_FLOAT, right_neighbor_rank, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+            my_current_array[0] = left_neighbor_float;
+            my_current_array[array_length - 1] = right_neighbor_float;
+
+            my_next_array[0] = wave(0);
+            my_next_array[array_length - 1] = wave(array_length - 1);
+
+            buffer_swap();
+        }
+        MPI_Isend(my_current_array, array_length, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, &reqs[2]);
+        printf("%i: sent my chunk\n", rank);
+        fflush(stdout); 
+    }
+
     MPI_Finalize();
     return NULL;
 }
