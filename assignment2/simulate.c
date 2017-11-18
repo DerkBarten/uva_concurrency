@@ -10,6 +10,11 @@
 
 #include "simulate.h"
 
+/*
+rank 0 is the master, the others send their part of the array to the master
+the master writes to disk
+*/
+
 
 
 /* Add any global variables you may need. */
@@ -56,6 +61,8 @@ double *simulate(const int i_max, const int t_max, double *old_array,
     printf("rank: %i\n", rank);
     printf("numtasks: %i\n", numtasks);
 
+    fflush(stdout);
+
     int left_neighbor_rank = rank - 1 ;
     int right_neighbor_rank = rank + 1;
     int array_length;
@@ -68,10 +75,9 @@ double *simulate(const int i_max, const int t_max, double *old_array,
     else{
         array_length = i_max / (numtasks - 1);
     }
-
     array_leftover = i_max % (numtasks - 1);
 
-    // Calculate where the arrays
+    // Calculate where the arrays should point
     my_old_array = old_array + rank * array_length;
     my_current_array = current_array + rank * array_length;
     my_next_array = next_array + rank * array_length;
@@ -93,6 +99,7 @@ double *simulate(const int i_max, const int t_max, double *old_array,
     }
     // The chunks that are not at the edges
     else if (left_neighbor_rank >= 0 && right_neighbor_rank < numtasks) {
+        printf("rank: %i\n", rank);
         for (int t = 0; t < t_max; t++) {
             MPI_Isend(&my_left, 1, MPI_FLOAT, left_neighbor_rank, 1, MPI_COMM_WORLD, &reqs[0]);
             MPI_Isend(&my_right, 1, MPI_FLOAT, right_neighbor_rank, 2, MPI_COMM_WORLD, &reqs[1]);
@@ -112,10 +119,11 @@ double *simulate(const int i_max, const int t_max, double *old_array,
 
             buffer_swap();
         }
-        
+        MPI_Send(my_current_array, array_length, MPI_DOUBLE,0,rank, MPI_COMM_WORLD);
     }
     // The right most chunk
     else if (right_neighbor_rank >= numtasks) {
+        printf("rank: %i\n", rank);
         for (int t = 0; t < t_max; t++) {
 
             MPI_Isend(&my_left, 1, MPI_FLOAT, left_neighbor_rank, 1, MPI_COMM_WORLD, &reqs[0]);
@@ -131,10 +139,12 @@ double *simulate(const int i_max, const int t_max, double *old_array,
 
             my_next_array[0] = wave(0);
             my_next_array[array_leftover - 1] = 0.0;
-        }         
+        }     
+        MPI_Send(my_current_array, array_length, MPI_DOUBLE,0,rank, MPI_COMM_WORLD);    
     }
     // The left most chunk
     else if (left_neighbor_rank < 0) {
+        printf("rank: %i\n", rank);
         for (int t = 0; t < t_max; t++) {
             MPI_Isend(&my_right, 1, MPI_FLOAT, right_neighbor_rank, 2, MPI_COMM_WORLD, &reqs[0]);
             
@@ -150,10 +160,13 @@ double *simulate(const int i_max, const int t_max, double *old_array,
             my_next_array[0] = 0.0;
             my_next_array[array_length - 1] = wave(array_length - 1);
         }
-
+        MPI_Recv((double*)(current_array + rank * array_length), array_leftover, MPI_FLOAT, rank, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
     }
-    
+    fflush(stdout);
+    printf("Now starting gathering chunks");
+    fflush(stdout);
+ 
     MPI_Finalize();
     printf("Proceces %i finished\n", rank);
-    return my_current_array;
+    return current_array;
 }
