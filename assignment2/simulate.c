@@ -120,12 +120,15 @@ double *simulate(const int i_max, const int t_max, double *old_array,
 
             MPI_Recv(&left_neighbor_float, 1, MPI_FLOAT, left_neighbor_rank, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
+            // Set the right value
             my_current_array[array_leftover - 1] = 0.0;
-            my_current_array[0] = left_neighbor_float;
-
-            my_next_array[0] = wave(0);
             my_next_array[array_leftover - 1] = 0.0;
 
+            // Set the neighbouring current value
+            my_current_array[-1] = left_neighbor_float;
+            // Calculate the left most cell
+            my_next_array[0] = wave(0);
+            
             buffer_swap();
         }   
         MPI_Isend(my_current_array, array_leftover, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, &reqs[1]); 
@@ -143,10 +146,12 @@ double *simulate(const int i_max, const int t_max, double *old_array,
 
             MPI_Recv(&right_neighbor_float, 1, MPI_FLOAT, right_neighbor_rank, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
+            // Set the left values
             my_current_array[0] = 0.0;
-            my_current_array[array_length - 1] = right_neighbor_float;
-            
             my_next_array[0] = 0.0;
+
+            // set the neighbouring current value
+            my_current_array[array_length] = right_neighbor_float;
             my_next_array[array_length - 1] = wave(array_length - 1);
 
             buffer_swap();
@@ -177,10 +182,12 @@ double *simulate(const int i_max, const int t_max, double *old_array,
             MPI_Recv(&left_neighbor_float, 1, MPI_FLOAT, left_neighbor_rank, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             MPI_Recv(&right_neighbor_float, 1, MPI_FLOAT, right_neighbor_rank, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-            my_current_array[0] = left_neighbor_float;
-            my_current_array[array_length - 1] = right_neighbor_float;
-
+            // Left side
+            my_current_array[-1] = left_neighbor_float;
             my_next_array[0] = wave(0);
+
+            // Right side
+            my_current_array[array_length] = right_neighbor_float;
             my_next_array[array_length - 1] = wave(array_length - 1);
 
             buffer_swap();
