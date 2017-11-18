@@ -81,10 +81,10 @@ double *simulate(const int i_max, const int t_max, double *old_array,
     // If the tasks cannot be well divided
     else {
         array_length = i_max / numtasks;
-        array_leftover = i_max - (numtasks - 1) * array_length;
-        printf("array length: %i\n", array_length);
-        printf("leftover length: %i\n", array_leftover);
+        array_leftover = i_max - (numtasks - 1) * array_length;    
     }
+    printf("array length: %i\n", array_length);
+    printf("leftover length: %i\n", array_leftover);
 
     // Calculate where the arrays should point
     my_old_array = old_array + rank * array_length;
@@ -110,8 +110,8 @@ double *simulate(const int i_max, const int t_max, double *old_array,
     }
     // The right most chunk
     else if (rank == numtasks - 1) {
+        printf("Im the right most chunk: %i\n", rank);
         for (int t = 0; t < t_max; t++) {
-
             MPI_Isend(&my_left, 1, MPI_FLOAT, left_neighbor_rank, 1, MPI_COMM_WORLD, &reqs[0]);
             
             for (int i = 1; i < array_leftover - 1; i++) {
