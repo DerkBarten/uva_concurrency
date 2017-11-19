@@ -7,8 +7,10 @@
 run:
 mpicc -c broadcast_test.c
 mpicc broadcast_test.o -o broadcast
-mpirun -np  3 broadcast -quiet
+mpirun -np  N broadcast -quiet
 
+TODO:
+    - should finish when last message is received
 */
 
 int MYMPI_Bcast (void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm communicator) {
@@ -41,6 +43,7 @@ int MYMPI_Bcast (void *buffer, int count, MPI_Datatype datatype, int root, MPI_C
         MPI_Isend(buffer, count, datatype, rank + 1, 0, communicator, &reqs[rank]);
         printf("process %i send to %i\n", rank, right );
     }
+
     MPI_Finalize();
     return 0;
 }
@@ -48,10 +51,12 @@ int MYMPI_Bcast (void *buffer, int count, MPI_Datatype datatype, int root, MPI_C
 void main() {
 
     MPI_Init(NULL, NULL);
-    int data = 100;
+    int data = 1000;
 
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MYMPI_Bcast (&data, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MYMPI_Bcast(&data, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+    return;
 
 }
