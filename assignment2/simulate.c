@@ -111,7 +111,11 @@ double *simulate(const int i_max, const int t_max, double *old_array,
     // The right most chunk
     else if (rank == numtasks - 1) {
         printf("Im the right most chunk: %i\n", rank);
+        printf("Right: Current array starts at: %p\n", current_array);
+        printf("Right: My current array starts at: %p\n", my_current_array);
+
         for (int t = 0; t < t_max; t++) {
+            my_left = my_current_array[0];
             MPI_Isend(&my_left, 1, MPI_FLOAT, left_neighbor_rank, 1, MPI_COMM_WORLD, &reqs[0]);
             
             for (int i = 1; i < array_leftover - 1; i++) {
@@ -137,7 +141,11 @@ double *simulate(const int i_max, const int t_max, double *old_array,
     }
     // The left most chunk
     else if (rank == 0) {
+        printf("Left: Current array starts at: %p\n", current_array);
+        printf("Left: My current array starts at: %p\n", my_current_array);
+
         for (int t = 0; t < t_max; t++) {
+            my_right = my_current_array[array_length - 1];
             MPI_Isend(&my_right, 1, MPI_FLOAT, right_neighbor_rank, 2, MPI_COMM_WORLD, &reqs[0]);
             
             for (int i = 1; i < array_length - 1; i++) {
@@ -160,10 +168,11 @@ double *simulate(const int i_max, const int t_max, double *old_array,
         fflush(stdout);
 
         for (int i = 1; i < numtasks - 1; i++) {
-            MPI_Recv((double*)(current_array + i * array_length), array_length, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            MPI_Recv((double *)(current_array + i * array_length), array_length, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             printf("Received chunk %i\n", i);
         }
-        MPI_Recv((double*)(current_array + (numtasks - 1) * array_length), array_leftover, MPI_DOUBLE, numtasks - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        // TODO: commenting this out doesn't change anything
+        MPI_Recv((double *)(current_array + (numtasks - 1) * array_length), array_leftover, MPI_DOUBLE, numtasks - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         printf("Received last chunk %i\n", numtasks - 1);
         MPI_Finalize();
         return current_array;
@@ -172,6 +181,9 @@ double *simulate(const int i_max, const int t_max, double *old_array,
     else {
         printf("Im a middle chunk: %i\n", rank);
         for (int t = 0; t < t_max; t++) {
+            my_left = my_current_array[0];
+            my_right = my_current_array[array_length - 1];
+
             MPI_Isend(&my_left, 1, MPI_FLOAT, left_neighbor_rank, 1, MPI_COMM_WORLD, &reqs[0]);
             MPI_Isend(&my_right, 1, MPI_FLOAT, right_neighbor_rank, 2, MPI_COMM_WORLD, &reqs[1]);
 
