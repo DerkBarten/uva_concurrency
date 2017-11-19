@@ -12,23 +12,34 @@ mpirun -np  3 broadcast -quiet
 */
 
 int MYMPI_Bcast (void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm communicator) {
-    int numtasks, rank;
+    int numtasks, rank, left, right;
     MPI_Comm_size(communicator, &numtasks);
     MPI_Comm_rank(communicator, &rank);
-    //MPI_Request reqs[numtasks];    
+    MPI_Request reqs[numtasks];  
+
 
     if (rank == root) {
-        int i;
-        printf("%i tasks\n", numtasks);
-        for( i = 0; i < numtasks; i++) {
-            if( i != rank) {
-                printf("rank %i send message\n", i);
-                MPI_Send(buffer, count, datatype, i, 0, communicator);
-            }
-        }
+        left = numtasks - 1;
+        right = root + 1;
+        printf("process %i receives from to %i\n", rank, left );
+        MPI_Recv(buffer, count, datatype, numtasks - 1, numtasks-1, communicator, MPI_STATUS_IGNORE);
+        MPI_Isend(buffer, count, datatype, 1, 0, communicator, &reqs[rank]);
+        printf("process %i send to %i\n", rank, right );
+        
+    } else if (rank == numtasks - 1) {
+        left = rank - 1;
+        right = root;
+        printf("process %i receives from to %i\n", rank, left );
+        MPI_Isend(buffer, count, datatype, root, 0 , communicator, &reqs[rank]);
+        MPI_Recv(buffer, count, datatype, rank - 1 , numtasks - 1, communicator, MPI_STATUS_IGNORE);
+        printf("process %i send to %i\n", rank, right );
     } else {
-        MPI_Recv(buffer, count, datatype, root, 0, communicator, MPI_STATUS_IGNORE);
-        printf("rank %i received message\n", rank);
+        right = rank + 1;
+        left = rank - 1;
+        printf("process %i receives from to %i\n", rank, left );
+        MPI_Recv(buffer, count, datatype, rank - 1, 0, communicator, MPI_STATUS_IGNORE);
+        MPI_Isend(buffer, count, datatype, rank + 1, 0, communicator, &reqs[rank]);
+        printf("process %i send to %i\n", rank, right );
     }
     MPI_Finalize();
     return 0;
@@ -41,7 +52,6 @@ void main() {
 
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
     MYMPI_Bcast (&data, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
 }
