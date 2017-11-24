@@ -18,35 +18,35 @@ public class TagCountMapper extends Mapper<LongWritable, Text, Text, IntWritable
 	@Override
 	public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
 		String line = value.toString().toLowerCase();
-		System.out.println(line);
 		StringTokenizer itr = new StringTokenizer(line);
-
+		System.out.println("-----------------------------------------------------");
+		System.out.println(line);
+		System.out.println("######################################################");
 		int count = 0;
 		while (itr.hasMoreTokens()) {
 			// Obtain the next word.
 			String token = itr.nextToken();
-
 			// check if word is hashtag
 			// If word is hashtag
 			// Write (tag, 1) as (key, value) in output
-			if isHastag(token) {
+			if (isHastag(token)) {
+				// System.out.println(line);
 				tag.set(token);
 				context.write(tag, one);
 				// Increment a counter.
 				context.getCounter(Counters.INPUT_TAGS).increment(1);
 			}
-			
-			
 		}
 	}
 
 	private boolean isHastag(String token) {
 		// 1. should have hashtag at start of string
 		// 2. should be longer at least 2 chars
-		if token.indexOf('#') == 0 && length(token) > 1 {
-			return True
+		if (token.substring(0,1) == "#" && token.length() > 1) {
+			return true;
 		} 
 		// 3. if string is length 2, second char can't be a number
-		return False
+		return false;
 	}
 } 
+
