@@ -1,4 +1,4 @@
-package nl.uva.cpp;
+package nl.uva.cpp.TagCount;
 
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.*;
@@ -15,6 +15,8 @@ public class TagCountTool extends Configured implements Tool {
 		Configuration conf = this.getConf();
 		Job job = Job.getInstance(conf);
 		job.setJarByClass(this.getClass());
+
+		conf.set("textinputformat.record.delimiter", "\n\n");
 
 		// Set the input and output paths for the job, to the paths given
 		// on the command line.

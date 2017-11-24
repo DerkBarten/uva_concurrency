@@ -1,4 +1,4 @@
-package nl.uva.cpp;
+package nl.uva.cpp.WordCount;
 
 import java.io.IOException;
 import java.util.StringTokenizer;

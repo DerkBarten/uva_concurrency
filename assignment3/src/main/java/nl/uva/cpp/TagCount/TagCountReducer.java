@@ -1,4 +1,4 @@
-package nl.uva.cpp;
+package nl.uva.cpp.TagCount;
 
 import java.io.IOException;
 

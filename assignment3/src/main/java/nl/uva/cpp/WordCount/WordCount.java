@@ -1,4 +1,4 @@
-package nl.uva.cpp;
+package nl.uva.cpp.WordCount;
 
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;

@@ -1,4 +1,4 @@
-package nl.uva.cpp;
+package nl.uva.cpp.TagCount;
 
 import java.io.IOException;
 import java.util.StringTokenizer;
@@ -18,6 +18,7 @@ public class TagCountMapper extends Mapper<LongWritable, Text, Text, IntWritable
 	@Override
 	public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
 		String line = value.toString().toLowerCase();
+		System.out.println(line);
 		StringTokenizer itr = new StringTokenizer(line);
 
 		int count = 0;
