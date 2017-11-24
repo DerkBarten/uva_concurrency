@@ -8,7 +8,7 @@ import org.apache.hadoop.mapreduce.lib.input.*;
 import org.apache.hadoop.mapreduce.lib.output.*;
 import org.apache.hadoop.util.*;
 
-public class WordCountTool extends Configured implements Tool {
+public class TagCountTool extends Configured implements Tool {
 
 	@Override
 	public int run(String[] args) throws Exception {
@@ -22,8 +22,8 @@ public class WordCountTool extends Configured implements Tool {
 		FileOutputFormat.setOutputPath(job, new Path(args[1]));
 
 		// Use our mapper and reducer classes.
-		job.setMapperClass(WordCountMapper.class);
-		job.setReducerClass(WordCountReducer.class);
+		job.setMapperClass(TagCountMapper.class);
+		job.setReducerClass(TagCountReducer.class);
 
 		// Our input file is a text file.
 		job.setInputFormatClass(TextInputFormat.class);

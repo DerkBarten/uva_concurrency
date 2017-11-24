@@ -6,13 +6,13 @@ import java.util.StringTokenizer;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.*;
 
-public class WordCountMapper extends Mapper<LongWritable, Text, Text, IntWritable> {
+public class TagCountMapper extends Mapper<LongWritable, Text, Text, IntWritable> {
 
 	private final static IntWritable one = new IntWritable(1);
-	private Text word = new Text();
+	private Text tag = new Text();
 
 	static enum Counters {
-		INPUT_WORDS
+		INPUT_TAGS
 	}
 
 	@Override
@@ -25,12 +25,27 @@ public class WordCountMapper extends Mapper<LongWritable, Text, Text, IntWritabl
 			// Obtain the next word.
 			String token = itr.nextToken();
 
-			// Write (word, 1) as (key, value) in output
-			word.set(token);
-			context.write(word, one);
-
-			// Increment a counter.
-			context.getCounter(Counters.INPUT_WORDS).increment(1);
+			// check if word is hashtag
+			// If word is hashtag
+			// Write (tag, 1) as (key, value) in output
+			if isHastag(token) {
+				tag.set(token);
+				context.write(tag, one);
+				// Increment a counter.
+				context.getCounter(Counters.INPUT_TAGS).increment(1);
+			}
+			
+			
 		}
+	}
+
+	private boolean isHastag(String token) {
+		// 1. should have hashtag at start of string
+		// 2. should be longer at least 2 chars
+		if token.indexOf('#') == 0 && length(token) > 1 {
+			return True
+		} 
+		// 3. if string is length 2, second char can't be a number
+		return False
 	}
 } 
