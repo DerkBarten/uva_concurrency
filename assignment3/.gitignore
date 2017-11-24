@@ -1,2 +1,9 @@
 *.ser
 *.txt
+*.class
+*.jar
+*.lst
+*.properties
+*.crc
+part-r-*
+_SUCCESS
