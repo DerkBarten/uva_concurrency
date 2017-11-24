@@ -8,7 +8,7 @@
     <properties>
         <java.version>7</java.version>
         <hadoop.version>2.6.0</hadoop.version>
-        <exec.mainClass>nl.uva.cpp.TagCount</exec.mainClass>
+        <exec.mainClass>nl.uva.cpp.WordCount</exec.mainClass>
     </properties>
   
     <repositories>
