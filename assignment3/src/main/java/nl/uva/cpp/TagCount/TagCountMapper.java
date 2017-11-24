@@ -1,4 +1,4 @@
-package nl.uva.cpp;
+package nl.uva.cpp.TagCount;
 
 import java.io.IOException;
 import java.util.StringTokenizer;
@@ -6,7 +6,7 @@ import java.util.StringTokenizer;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.*;
 
-public class WordCountMapper extends Mapper<LongWritable, Text, Text, IntWritable> {
+public class TagCountMapper extends Mapper<LongWritable, Text, Text, IntWritable> {
 
 	private final static IntWritable one = new IntWritable(1);
 	private Text word = new Text();
@@ -18,6 +18,7 @@ public class WordCountMapper extends Mapper<LongWritable, Text, Text, IntWritabl
 	@Override
 	public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
 		String line = value.toString().toLowerCase();
+		System.out.println(line);
 		StringTokenizer itr = new StringTokenizer(line);
 
 		int count = 0;

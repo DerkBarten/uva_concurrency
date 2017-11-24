@@ -1,4 +1,4 @@
-package nl.uva.cpp;
+package nl.uva.cpp.TagCount;
 
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.fs.*;
@@ -8,7 +8,7 @@ import org.apache.hadoop.mapreduce.lib.input.*;
 import org.apache.hadoop.mapreduce.lib.output.*;
 import org.apache.hadoop.util.*;
 
-public class WordCountTool extends Configured implements Tool {
+public class TagCountTool extends Configured implements Tool {
 
 	@Override
 	public int run(String[] args) throws Exception {
@@ -16,14 +16,16 @@ public class WordCountTool extends Configured implements Tool {
 		Job job = Job.getInstance(conf);
 		job.setJarByClass(this.getClass());
 
+		conf.set("textinputformat.record.delimiter", "\n\n");
+
 		// Set the input and output paths for the job, to the paths given
 		// on the command line.
 		FileInputFormat.addInputPath(job, new Path(args[0]));
 		FileOutputFormat.setOutputPath(job, new Path(args[1]));
 
 		// Use our mapper and reducer classes.
-		job.setMapperClass(WordCountMapper.class);
-		job.setReducerClass(WordCountReducer.class);
+		job.setMapperClass(TagCountMapper.class);
+		job.setReducerClass(TagCountReducer.class);
 
 		// Our input file is a text file.
 		job.setInputFormatClass(TextInputFormat.class);
