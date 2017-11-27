@@ -17,21 +17,20 @@ public class TagCountMapper extends Mapper<LongWritable, Text, Text, IntWritable
 
 	@Override
 	public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
-		String line = value.toString().toLowerCase();
-		StringTokenizer itr = new StringTokenizer(line);
-		System.out.println("-----------------------------------------------------");
-		System.out.println(line);
-		System.out.println("######################################################");
+		String string = value.toString().toLowerCase();
+		String[] lines = string.split("\n");
+		String tweet = lines[2];
+		StringTokenizer itr = new StringTokenizer(tweet);
+
 		int count = 0;
 		while (itr.hasMoreTokens()) {
-			// Obtain the next word.
+			// Obtain the next token
 			String token = itr.nextToken();
-			// check if word is hashtag
-			// If word is hashtag
-			// Write (tag, 1) as (key, value) in output
+			
+			// Check if word is hashtag
 			if (isHastag(token)) {
-				// System.out.println(line);
 				tag.set(token);
+				// Write (tag, 1) as (key, value) in output
 				context.write(tag, one);
 				// Increment a counter.
 				context.getCounter(Counters.INPUT_TAGS).increment(1);
@@ -42,7 +41,7 @@ public class TagCountMapper extends Mapper<LongWritable, Text, Text, IntWritable
 	private boolean isHastag(String token) {
 		// 1. should have hashtag at start of string
 		// 2. should be longer at least 2 chars
-		if (token.substring(0,1) == "#" && token.length() > 1) {
+		if (token.substring(0,1).equals("#") && token.length() > 1) {
 			return true;
 		} 
 		// 3. if string is length 2, second char can't be a number
