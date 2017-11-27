@@ -13,10 +13,12 @@ public class TagCountTool extends Configured implements Tool {
 	@Override
 	public int run(String[] args) throws Exception {
 		Configuration conf = this.getConf();
+		conf.set("textinputformat.record.delimiter", "\n\n");
+
 		Job job = Job.getInstance(conf);
 		job.setJarByClass(this.getClass());
 
-		conf.set("textinputformat.record.delimiter", "\n\n");
+		
 
 		// Set the input and output paths for the job, to the paths given
 		// on the command line.
