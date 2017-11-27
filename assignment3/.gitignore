@@ -1,4 +1,4 @@
-*.ser
+*.ser.gz
 *.txt
 *.class
 *.jar
