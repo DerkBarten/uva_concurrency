@@ -22,9 +22,18 @@ public class SentimentAnalysisMapper extends Mapper<LongWritable, Text, Text, In
 	private IntWritable sentiment;
 	private Text tag = new Text();
 	String parseModelPath = "englishPCFG.ser.gz";
-	String sentimentModelPath = "sentiments.ser.gz";
+	String sentimentModelPath = "sentiment.ser.gz";
+	Properties  props;
+	StanfordCoreNLP  pipeline;
 	UberLanguageDetector detector = UberLanguageDetector.getInstance();
 
+	public SentimentAnalysisMapper(){
+		props = new  Properties ();
+		props.setProperty("annotators", "tokenize , ssplit , parse , sentiment");
+		props.put("parse.model", parseModelPath);
+		props.put("sentiment.model", sentimentModelPath);
+		pipeline = new  StanfordCoreNLP(props);
+	}
 
 	static enum Counters {
 		INPUT_TAGS
@@ -53,10 +62,10 @@ public class SentimentAnalysisMapper extends Mapper<LongWritable, Text, Text, In
 					if (!language.equals("en")){
 						break;
 					}
-					sentiment = new IntWritable(findSentiment(tweet)); 
+					int i = findSentiment(tweet);
+					sentiment = new IntWritable(i); 
 					hasHashtag = true;
 				}
-				System.out.println(token);
 				tag.set(token);
 				// Write (tag, 1) as (key, value) in output
 				context.write(tag, sentiment);
@@ -78,12 +87,6 @@ public class SentimentAnalysisMapper extends Mapper<LongWritable, Text, Text, In
 	}
 
 	private  int  findSentiment(String  text) {
-		Properties  props = new  Properties ();
-		props.setProperty("annotators", "tokenize , ssplit , parse , sentiment");
-		props.put("parse.model", parseModelPath);
-		props.put("sentiment.model", sentimentModelPath);
-
-		StanfordCoreNLP  pipeline = new  StanfordCoreNLP(props);
 		int  mainSentiment = 0;
 		if (text != null && text.length () > 0) {
 			int  longest = 0;
@@ -99,10 +102,7 @@ public class SentimentAnalysisMapper extends Mapper<LongWritable, Text, Text, In
 			}
 		}
 		//This  method  is very  demanding  so try so save  some  memory
-		pipeline = null;
-		System.gc();
 		return  mainSentiment;
 	}
-
 } 
 

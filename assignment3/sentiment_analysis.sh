@@ -1,6 +1,6 @@
 # Constants
 REDUCERS=5
-TOP=10
+TOP=50
 
 # Remove the previous output
 rm -rf output
@@ -8,5 +8,12 @@ rm -rf output
 mvn package
 mvn exec:java  -Dexec.mainClass="nl.uva.cpp.SentimentAnalysis.SentimentAnalysis" -Dexec.args="tweets.txt output/ $REDUCERS"
 # Display the most popular hashtags
-echo "Top $TOP most popular hashtags:"
-cat output/part-r-* | sort -r -n -k2,2 -t $'\t' | head -n $TOP
+echo ""
+echo "Highest average sentiment:"
+echo "Tag - Count - Average - Standard deviation"
+cat output/part-r-* | sort -r -n -k3,3 -t $'\t' | head -n $TOP
+
+echo ""
+echo "Lowest average sentiment:"
+echo "Tag - Count - Average - Standard deviation"
+cat output/part-r-* | sort -n -k3,3 -t $'\t' | head -n $TOP
