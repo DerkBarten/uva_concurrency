@@ -13,13 +13,14 @@ public class SentimentAnalysisReducer extends Reducer<Text, IntWritable, Text, T
 		int sum = 0;
 		int count = 0;
 
-		// Convert iterable to a list
+		// Convert iterable to a list because we need to iterate over it twice
 		List<Integer> list = new ArrayList<Integer>();
 		for (IntWritable val : values) {
 			int i = val.get();
 			list.add(i);
 		}
 
+		// Calculate the mean sentiment
 		for (Integer val : list) {
 			sum += val;
 			count++;
@@ -27,6 +28,7 @@ public class SentimentAnalysisReducer extends Reducer<Text, IntWritable, Text, T
 		float mean = (float)sum / (float)count;
 		double sd = 0;
 
+		// Use the mean sentiment to calculate the standard deviation
 		for (Integer val : list) {
 			sd += Math.pow(val - mean, 2);
 		}

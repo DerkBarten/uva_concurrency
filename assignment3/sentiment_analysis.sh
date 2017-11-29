@@ -1,12 +1,12 @@
 # Constants
-REDUCERS=5
+MAPPERS=5
 TOP=10
 
 # Remove the previous output
 rm -rf output
 # Build and run the program
 mvn package
-mvn exec:java  -Dexec.mainClass="nl.uva.cpp.SentimentAnalysis.SentimentAnalysis" -Dexec.args="tweets.txt output/ $REDUCERS"
+mvn exec:java  -Dexec.mainClass="nl.uva.cpp.SentimentAnalysis.SentimentAnalysis" -Dexec.args="tweets.txt output/ $MAPPERS"
 # Display the most popular hashtags
 echo ""
 echo "Top $TOP hashtags:"
