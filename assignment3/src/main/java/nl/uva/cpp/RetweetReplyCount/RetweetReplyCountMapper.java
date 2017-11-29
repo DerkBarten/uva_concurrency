@@ -22,8 +22,6 @@ public class RetweetReplyCountMapper extends Mapper<LongWritable, Text, Text, In
 		String string = value.toString().toLowerCase();
 		String[] lines = string.split("\n");
 		String tweet = lines[2];
-		// Remove the twitter URL from the name
-		// String user = lines[1].replace("http://twitter.com/","");
 		StringTokenizer itr = new StringTokenizer(tweet);
 		int count = 0;
 

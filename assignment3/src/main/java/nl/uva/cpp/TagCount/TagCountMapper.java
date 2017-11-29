@@ -39,12 +39,9 @@ public class TagCountMapper extends Mapper<LongWritable, Text, Text, IntWritable
 	}
 
 	private boolean isHastag(String token) {
-		// 1. should have hashtag at start of string
-		// 2. should be longer at least 2 chars
-		if (token.substring(0,1).equals("#") && token.length() > 1) {
+		if (token.substring(0,1).equals("#")) {
 			return true;
 		} 
-		// 3. if string is length 2, second char can't be a number
 		return false;
 	}
 } 
