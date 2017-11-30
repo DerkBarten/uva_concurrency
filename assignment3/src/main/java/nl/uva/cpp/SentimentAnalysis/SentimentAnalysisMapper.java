@@ -48,7 +48,7 @@ public class SentimentAnalysisMapper extends Mapper<LongWritable, Text, Text, In
 		StringTokenizer itr = new StringTokenizer(tweet);
 		String language;
 
-		boolean hasHashtag = false;
+		boolean hashtagFlag = false;
 
 		int count = 0;
 		while (itr.hasMoreTokens()) {
@@ -57,19 +57,20 @@ public class SentimentAnalysisMapper extends Mapper<LongWritable, Text, Text, In
 			
 			// Check if word is hashtag
 			if (isHastag(token)) {
-				if (!hasHashtag) {
+				// Only calculate the sentiment value once for the sentence
+				if (!hashtagFlag) {
+					// Exit if the language is not English
 					language = detector.detectLang(tweet);
 					if (!language.equals("en")){
 						break;
 					}
 					int i = findSentiment(tweet);
 					sentiment = new IntWritable(i); 
-					hasHashtag = true;
+					hashtagFlag = true;
 				}
 				tag.set(token);
-				// Write (tag, 1) as (key, value) in output
 				context.write(tag, sentiment);
-				// Increment a counter.
+				// Increment a counter
 				context.getCounter(Counters.INPUT_TAGS).increment(1);
 				
 			}

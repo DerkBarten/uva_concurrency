@@ -16,8 +16,6 @@ public class TagCountReducer extends Reducer<Text, IntWritable, Text, IntWritabl
 			sum += val.get();
 			count++;
 		}
-		/*String value = String.valueOf(count) + "\t" + String.valueOf(sum);
-		context.write(key, new Text(value));*/
 		context.write(key, new IntWritable(sum));
 	}
 }
