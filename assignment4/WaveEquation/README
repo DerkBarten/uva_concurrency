@@ -1,0 +1,6 @@
+compile: make
+run: make run
+plot: make plot
+clean: make clean
+
+or just run run.sh
