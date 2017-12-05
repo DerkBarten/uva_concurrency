@@ -4,6 +4,7 @@
 #include <string.h>
 #include "timer.h"
 #include <iostream>
+#include <cuda.h>
 
 using namespace std;
 
@@ -85,40 +86,4 @@ void vectorAddCuda(int n, float* a, float* b, float* result) {
     cudaEventElapsedTime(&elapsedTime, start, stop);
     
     cout << "kernel invocation took " << elapsedTime << " milliseconds" << endl;
-}
-
-
-int main(int argc, char* argv[]) {
-    int n = 65536;
-    timer vectorAddTimer("vector add timer");
-    float* a = new float[n];
-    float* b = new float[n];
-    float* result = new float[n];
-
-    // initialize the vectors.
-    for(int i=0; i<n; i++) {
-        a[i] = i;
-        b[i] = i;
-    }
-
-    vectorAddTimer.start();
-    vectorAddCuda(n, a, b, result);
-    vectorAddTimer.stop();
-
-    cout << vectorAddTimer;
-
-    // verify the resuls
-    for(int i=0; i<n; i++) {
-        if(result[i] != 2*i) {
-            cout << "error in results! Element " << i << " is " << result[i] << ", but should be " << (2*i) << endl;
-            exit(1);
-        }
-    }
-    cout << "results OK!" << endl;
-            
-    delete[] a;
-    delete[] b;
-    delete[] result;
-    
-    return 0;
 }

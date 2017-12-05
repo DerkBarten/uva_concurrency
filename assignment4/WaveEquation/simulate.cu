@@ -8,6 +8,7 @@
 #include <stdlib.h>
 
 #include "simulate.h"
+#include "vector-math.h"
 
 double WAVE_C = 0.15; 
 
@@ -38,45 +39,15 @@ double wave(double *old_array, double *current_array, int i, int i_max) {
 double *simulate(const int i_max, const int t_max, const int num_threads,
         double *old_array, double *current_array, double *next_array)
 {
-    /*
-     * Your implementation should go here.
-     */
-    /*
-    for (int j = 0; j < i_max; j++){
-        printf("o%i %f\n",j,old_array[j]);
-    }
-    for (int j = 0; j < i_max; j++){
-        printf("c%i %f\n",j,current_array[j]);
-    }
-    for (int j = 0; j < i_max; j++){
-        next_array[j] = wave(old_array, current_array, j, i_max);
-    }
-    for (int j = 0; j < i_max; j++){
-        printf("n%i %f\n",j,next_array[j]);
-    }
-    */
-
     for (int i = 0; i < t_max; i++) {
         for (int j = 0; j < i_max; j++){
             next_array[j] = wave(old_array, current_array, j, i_max);
         }
-        /*
-        printf("before:\n");
-        printf("old: %p\n", old_array);
-        printf("cur: %p\n", current_array);
-        printf("nex: %p\n", next_array);
-        */
+
         double *temp = old_array;
         old_array = current_array;
         current_array = next_array;
         next_array = temp;
-
-        /*
-        printf("after:\n");
-        printf("old: %p\n", old_array);
-        printf("cur: %p\n", current_array);
-        printf("nex: %p\n", next_array);
-        */
     }
 
     return current_array;

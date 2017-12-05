@@ -1,5 +1,5 @@
 /*
- * assign2_1.c
+ * main.c
  *
  * Contains code for setting up and finishing the simulation.
  * NOTE: YOU SHOULD IMPLEMENT NOT HAVE TO LOOK HERE, IMPLEMENT YOUR CODE IN
@@ -11,48 +11,48 @@
 #include <string.h>
 #include <math.h>
 
+#include "generatedata.h"
 #include "file.h"
-#include "timer.h"
 #include "simulate.h"
 
 typedef double (*func_t)(double x);
 
-/*
- * Simple gauss with mu=0, sigma^1=1
- */
-double gauss(double x)
-{
-    return exp((-1 * x * x) / 2);
-}
+// /*
+// /*
+//  * Simple gauss with mu=0, sigma^1=1
+//  */
+// double gauss(double x)
+// {
+//     return exp((-1 * x * x) / 2);
+// }
 
 
-/*
- * Fills a given array with samples of a given function. This is used to fill
- * the initial arrays with some starting data, to run the simulation on.
- *
- * The first sample is placed at array index `offset'. `range' samples are
- * taken, so your array should be able to store at least offset+range doubles.
- * The function `f' is sampled `range' times between `sample_start' and
- * `sample_end'.
- */
-void fill(double *array, int offset, int range, double sample_start,
-        double sample_end, func_t f)
-{
-    int i;
-    float dx;
+// /*
+//  * Fills a given array with samples of a given function. This is used to fill
+//  * the initial arrays with some starting data, to run the simulation on.
+//  *
+//  * The first sample is placed at array index `offset'. `range' samples are
+//  * taken, so your array should be able to store at least offset+range doubles.
+//  * The function `f' is sampled `range' times between `sample_start' and
+//  * `sample_end'.
+//  */
+// void fill(double *array, int offset, int range, double sample_start,
+//         double sample_end, func_t f)
+// {
+//     int i;
+//     float dx;
 
-    dx = (sample_end - sample_start) / range;
-    for (i = 0; i < range; i++) {
-        array[i + offset] = f(sample_start + i * dx);
-    }
-}
+//     dx = (sample_end - sample_start) / range;
+//     for (i = 0; i < range; i++) {
+//         array[i + offset] = f(sample_start + i * dx);
+//     }
+// }
 
 
 int main(int argc, char *argv[])
 {
     double *old, *current, *next, *ret;
     int t_max, i_max, num_threads;
-    double time;
 
     /* Parse commandline args: i_max t_max num_threads */
     if (argc < 4) {
@@ -91,9 +91,9 @@ int main(int argc, char *argv[])
     }
 
     /* Allocate and initialize buffers. */
-    old = malloc(i_max * sizeof(double));
-    current = malloc(i_max * sizeof(double));
-    next = malloc(i_max * sizeof(double));
+    old = (double *)malloc(i_max * sizeof(double));
+    current = (double *)malloc(i_max * sizeof(double));
+    next = (double *)malloc(i_max * sizeof(double));
 
     if (old == NULL || current == NULL || next == NULL) {
         fprintf(stderr, "Could not allocate enough memory, aborting.\n");
@@ -132,16 +132,8 @@ int main(int argc, char *argv[])
         fill(current, 2, i_max/4, 0, 2*3.14, sin);
     }
 
-
-    timer_start();
-
     /* Call the actual simulation that should be implemented in simulate.c. */
     ret = simulate(i_max, t_max, num_threads, old, current, next);
-
-    time = timer_end();
-    printf("Took %g seconds\n", time);
-    printf("Normalized: %g seconds\n", time / (1. * i_max * t_max));
-
     file_write_double_array("result.txt", ret, i_max);
 
     free(old);
