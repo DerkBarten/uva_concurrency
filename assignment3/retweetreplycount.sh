@@ -6,9 +6,7 @@ TOP=10
 rm -rf output
 # Build and run the program
 mvn package
-mvn exec:java  -Dexec.mainClass="nl.uva.cpp.SentimentAnalysis.SentimentAnalysis" -Dexec.args="tweets.txt output/ $MAPPERS"
+mvn exec:java -Dexec.mainClass="nl.uva.cpp.RetweetReplyCount.RetweetReplyCount" -Dexec.args="tweets.txt output/ $MAPPERS"
 # Display the most popular hashtags
-echo ""
-echo "Top $TOP hashtags:"
-echo "Tag - Count - Average - Standard deviation"
+echo "Top $TOP most retweets:"
 cat output/part-r-* | sort -r -n -k2,2 -t $'\t' | head -n $TOP

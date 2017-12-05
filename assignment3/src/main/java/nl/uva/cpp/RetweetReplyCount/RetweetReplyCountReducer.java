@@ -1,11 +1,11 @@
-package nl.uva.cpp.TagCount;
+package nl.uva.cpp.RetweetReplyCount;
 
 import java.io.IOException;
 
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.*;
 
-public class TagCountReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
+public class RetweetReplyCountReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
 
 	@Override
 	public void reduce(Text key, Iterable<IntWritable> values, Context context) 
