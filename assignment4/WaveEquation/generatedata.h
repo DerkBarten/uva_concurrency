@@ -1,7 +1,7 @@
 #pragma once
 
-typedef double (*func_t)(double x);
+typedef float (*func_t)(float x);
 
-double gauss(double x);
-void fill(double *array, int offset, int range, double sample_start,
-        double sample_end, func_t f);
+float gauss(float x);
+void fill(float *array, int offset, int range, float sample_start,
+        float sample_end, func_t f);

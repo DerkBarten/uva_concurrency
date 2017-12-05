@@ -4,7 +4,6 @@
 #include <string.h>
 #include "timer.h"
 #include <iostream>
-#include <cuda.h>
 
 using namespace std;
 
@@ -25,15 +24,23 @@ static void checkCudaCall(cudaError_t result) {
     }
 }
 
-
-__global__ void vectorAddKernel(float* deviceA, float* deviceB, float* deviceResult) {
+__global__ void vectorSimulateKernel(float* old, float* current, float* next, int i_max) {
     unsigned index = blockIdx.x * blockDim.x + threadIdx.x;
-    deviceResult[index] = deviceA[index] + deviceB[index];
+    
+        if (index == 0 || index == i_max - 1){
+            next[index] = 0.0;
+            return;
+        }
+
+        next[index] = 2.0 * current[index] - old[index] + 
+            0.15 * (current[index - 1] - 
+            (2.0 * current[index] - current[index + 1]));
+
+     
 }
 
-
-void vectorAddCuda(int n, float* a, float* b, float* result) {
-    int threadBlockSize = 512;
+void vectorSimulateCuda(int n, float* a, float* b, float* result, int t_max) {
+    int threadBlockSize = 500;
 
     // allocate the vectors on the GPU
     float* deviceA = NULL;
@@ -68,7 +75,14 @@ void vectorAddCuda(int n, float* a, float* b, float* result) {
 
     // execute kernel
     cudaEventRecord(start, 0);
-    vectorAddKernel<<<n/threadBlockSize, threadBlockSize>>>(deviceA, deviceB, deviceResult);
+    for (int i = 0; i < t_max; i++) {
+        vectorSimulateKernel<<<n/threadBlockSize, threadBlockSize>>>(deviceA, deviceB, deviceResult, n);
+        
+        float *temp = deviceA;
+        deviceA = deviceB;
+        deviceB = deviceResult;
+        deviceB = temp;
+    }
     cudaEventRecord(stop, 0);
 
     // check whether the kernel invocation was successful

@@ -1,11 +1,3 @@
-/*
- * main.c
- *
- * Contains code for setting up and finishing the simulation.
- * NOTE: YOU SHOULD IMPLEMENT NOT HAVE TO LOOK HERE, IMPLEMENT YOUR CODE IN
- *       simulate.c.
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,43 +7,10 @@
 #include "file.h"
 #include "simulate.h"
 
-typedef double (*func_t)(double x);
-
-// /*
-// /*
-//  * Simple gauss with mu=0, sigma^1=1
-//  */
-// double gauss(double x)
-// {
-//     return exp((-1 * x * x) / 2);
-// }
-
-
-// /*
-//  * Fills a given array with samples of a given function. This is used to fill
-//  * the initial arrays with some starting data, to run the simulation on.
-//  *
-//  * The first sample is placed at array index `offset'. `range' samples are
-//  * taken, so your array should be able to store at least offset+range doubles.
-//  * The function `f' is sampled `range' times between `sample_start' and
-//  * `sample_end'.
-//  */
-// void fill(double *array, int offset, int range, double sample_start,
-//         double sample_end, func_t f)
-// {
-//     int i;
-//     float dx;
-
-//     dx = (sample_end - sample_start) / range;
-//     for (i = 0; i < range; i++) {
-//         array[i + offset] = f(sample_start + i * dx);
-//     }
-// }
-
 
 int main(int argc, char *argv[])
 {
-    double *old, *current, *next, *ret;
+    float *old, *current, *next, *ret;
     int t_max, i_max, num_threads;
 
     /* Parse commandline args: i_max t_max num_threads */
@@ -91,18 +50,18 @@ int main(int argc, char *argv[])
     }
 
     /* Allocate and initialize buffers. */
-    old = (double *)malloc(i_max * sizeof(double));
-    current = (double *)malloc(i_max * sizeof(double));
-    next = (double *)malloc(i_max * sizeof(double));
+    old = (float *)malloc(i_max * sizeof(float));
+    current = (float *)malloc(i_max * sizeof(float));
+    next = (float *)malloc(i_max * sizeof(float));
 
     if (old == NULL || current == NULL || next == NULL) {
         fprintf(stderr, "Could not allocate enough memory, aborting.\n");
         return EXIT_FAILURE;
     }
 
-    memset(old, 0, i_max * sizeof(double));
-    memset(current, 0, i_max * sizeof(double));
-    memset(next, 0, i_max * sizeof(double));
+    memset((void *)old, 0, i_max * sizeof(float));
+    memset((void *)current, 0, i_max * sizeof(float));
+    memset((void *)next, 0, i_max * sizeof(float));
 
     /* How should we will our first two generations? */
     if (argc > 4) {

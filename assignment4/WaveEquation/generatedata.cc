@@ -6,7 +6,7 @@
 /*
  * Simple gauss with mu=0, sigma^1=1
  */
-double gauss(double x)
+float gauss(float x)
 {
     return exp((-1 * x * x) / 2);
 }
@@ -17,8 +17,8 @@ double gauss(double x)
  * should be able to store at least offset+range doubles. The function `f' is
  * sampled `range' times between `sample_start' and `sample_end'.
  */
-void fill(double *array, int offset, int range, double sample_start,
-        double sample_end, func_t f)
+void fill(float *array, int offset, int range, float sample_start,
+        float sample_end, func_t f)
 {
     int i;
     float dx;

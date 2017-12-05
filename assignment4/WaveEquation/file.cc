@@ -13,7 +13,7 @@
 /*
  * Reads at most n doubles from a given file into an array.
  */
-void file_read_double_array(const char *filename, double *array, int n)
+void file_read_double_array(const char *filename, float *array, int n)
 {
     FILE *fp;
     int i;
@@ -29,7 +29,7 @@ void file_read_double_array(const char *filename, double *array, int n)
     for (i = 0; i < n; i++) {
         if (feof(fp))
             break;
-        fscanf(fp, "%lf", &array[i]);
+        fscanf(fp, "%f", &array[i]);
     }
 
     fclose(fp);
@@ -39,7 +39,7 @@ void file_read_double_array(const char *filename, double *array, int n)
  * Saves an array with n items to a given file, overwriting any previous
  * contents.
  */
-void file_write_double_array(const char *filename, double *array, int n)
+void file_write_double_array(const char *filename, float *array, int n)
 {
     FILE *fp;
     int i;
