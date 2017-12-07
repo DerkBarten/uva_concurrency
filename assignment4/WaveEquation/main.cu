@@ -11,14 +11,14 @@
 int main(int argc, char *argv[])
 {
     float *old, *current, *next, *ret;
-    int t_max, i_max, num_threads;
+    int t_max, i_max, threadBlockSize;
 
-    /* Parse commandline args: i_max t_max num_threads */
+    /* Parse commandline args: i_max t_max threadBlockSize */
     if (argc < 4) {
-        printf("Usage: %s i_max t_max num_threads [initial_data]\n", argv[0]);
+        printf("Usage: %s i_max t_max threadBlockSize [initial_data]\n", argv[0]);
         printf(" - i_max: number of discrete amplitude points, should be >2\n");
         printf(" - t_max: number of discrete timesteps, should be >=1\n");
-        printf(" - num_threads: number of threads to use for simulation, "
+        printf(" - threadBlockSize: the threadblocksize used for the simulation, "
                 "should be >=1\n");
         printf(" - initial_data: select what data should be used for the first "
                 "two generation.\n");
@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
 
     i_max = atoi(argv[1]);
     t_max = atoi(argv[2]);
-    num_threads = atoi(argv[3]);
+    threadBlockSize = atoi(argv[3]);
 
     if (i_max < 3) {
         printf("argument error: i_max should be >2.\n");
@@ -44,8 +44,8 @@ int main(int argc, char *argv[])
         printf("argument error: t_max should be >=1.\n");
         return EXIT_FAILURE;
     }
-    if (num_threads < 1) {
-        printf("argument error: num_threads should be >=1.\n");
+    if (threadBlockSize < 8) {
+        printf("argument error: threadBlockSize should be >=8.\n");
         return EXIT_FAILURE;
     }
 
@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
     }
 
     /* Call the actual simulation that should be implemented in simulate.c. */
-    ret = simulate(i_max, t_max, num_threads, old, current, next);
+    ret = simulate(i_max, t_max, threadBlockSize, old, current, next);
     file_write_double_array("result.txt", ret, i_max);
 
     free(old);

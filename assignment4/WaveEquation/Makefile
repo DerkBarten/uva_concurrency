@@ -2,7 +2,7 @@ PROGNAME = main
 #SRCFILES = main.cpp file.cpp simulate.cpp
 #TARNAME = assign1_2.tgz
 
-RUNARGS = 1000 1000 1 # i_max t_max num_threads, increase this when testing on the DAS4!
+RUNARGS = 1000 1000 512 # i_max t_max threadBlockSize, increase this when testing on the DAS4!
 
 IMAGEVIEW = display
 NVCC = nvcc
@@ -17,7 +17,7 @@ CC_FLAGS	= -O3 -m64 -Wall
 #LFLAGS = -lm -lrt
 
 CU_MAIN	= main.cu
-CU_SOURCES = vector-math.cu simulate.cu
+CU_SOURCES = simulate.cu
 CC_SOURCES = file.cc generatedata.cc
 
 # Do some substitution to get a list of .o files from the given .c files.
