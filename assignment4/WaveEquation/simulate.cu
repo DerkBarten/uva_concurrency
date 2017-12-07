@@ -7,6 +7,7 @@
 #include <iostream>
 
 // TODO:
+// Some sort of nondeterministic bug
 // Different mode support
 // different threadblocksize support
 // working modes
@@ -36,16 +37,16 @@ static void checkCudaCall(cudaError_t result) {
 }
 
 
-int createDevices(float *deviceA, float *deviceB, float *deviceResult, int size) {
+int createDevices(void  **deviceA, void**deviceB, void**deviceResult, int size) {
     
-    checkCudaCall(cudaMalloc((void **) &deviceA, size));
+    checkCudaCall(cudaMalloc(deviceA, size));
     if (deviceA == NULL) {
         cout << "could not allocate memory!" << endl;
         return 0;
     }
 
     
-    checkCudaCall(cudaMalloc((void **) &deviceB, size));
+    checkCudaCall(cudaMalloc(deviceB, size));
     if (deviceB == NULL) {
         checkCudaCall(cudaFree(deviceA));
         cout << "could not allocate memory!" << endl;
@@ -53,7 +54,7 @@ int createDevices(float *deviceA, float *deviceB, float *deviceResult, int size)
     }
 
     
-    checkCudaCall(cudaMalloc((void **) &deviceResult, size));
+    checkCudaCall(cudaMalloc(deviceResult, size));
     if (deviceResult == NULL) {
         checkCudaCall(cudaFree(deviceA));
         checkCudaCall(cudaFree(deviceB));
@@ -63,14 +64,7 @@ int createDevices(float *deviceA, float *deviceB, float *deviceResult, int size)
     return 1;
 }
 
-__global__ void simulateBoundCheckKernel(float* old, float* current, float* next, int i_max) {
-    unsigned index = blockIdx.x * blockDim.x + threadIdx.x;
-    
-        if (index > 0 && index < i_max){
-            next[index] = 2.0 * current[index] - old[index] + 0.15 * 
-                (current[index - 1] - (2.0 * current[index] - current[index + 1]));
-        }          
-}
+
 
 __global__ void simulateNoBoundCheckKernel(float* old, float* current, float* next) {
     unsigned index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -99,8 +93,9 @@ void simulateNoBoundCheck(int n, float* a, float* b, float* result, int t_max, i
     float* deviceB = NULL;
     float* deviceResult = NULL;
     
-    // Exit if there is an error during allocation
-    if (!createDevices(deviceA, deviceB, deviceResult, size)) {
+     // Exit if there is an error during allocation
+     if (!createDevices((void **)&deviceA, (void **)&deviceB, (void **)&deviceResult, size)) {
+        fprintf(stderr, "Error creating device\n");
         return;
     } 
 
@@ -160,6 +155,15 @@ void simulateNoBoundCheck(int n, float* a, float* b, float* result, int t_max, i
 
 }
 
+__global__ void simulateBoundCheckKernel(float* old, float* current, float* next, int i_max) {
+    unsigned index = blockIdx.x * blockDim.x + threadIdx.x;
+    
+        if (index > 0 && index < i_max - 1){
+            next[index] = 2.0 * current[index] - old[index] + 0.15 * 
+                (current[index - 1] - (2.0 * current[index] - current[index + 1]));
+        }          
+}
+
 void simulateBoundCheck(int n, float* a, float* b, float* result, int t_max, int threadBlockSize) {
     int size = n * sizeof(float); 
 
@@ -169,22 +173,24 @@ void simulateBoundCheck(int n, float* a, float* b, float* result, int t_max, int
     float* deviceResult = NULL;
     
     // Exit if there is an error during allocation
-    if (!createDevices(deviceA, deviceB, deviceResult, size)) {
+    if (!createDevices((void **)&deviceA, (void **)&deviceB, (void **)&deviceResult, size)) {
+        fprintf(stderr, "Error creating device\n");
         return;
-    } 
+    }
 
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
 
-    fprintf(stderr, "before memcpy %p\n", deviceA);
     checkCudaCall(cudaMemcpy(deviceA, a, size, cudaMemcpyHostToDevice));
     checkCudaCall(cudaMemcpy(deviceB, b, size, cudaMemcpyHostToDevice));
-    fprintf(stderr, "after memcpy\n");
 
     cudaEventRecord(start, 0);
-    for (int i = 0; i < t_max; i++) {
-        simulateBoundCheckKernel<<<ceil(n/(float)threadBlockSize), threadBlockSize>>>(deviceA, deviceB, deviceResult, n);
+    int blocks = ceil((float)n/(float)threadBlockSize);
+
+    printf("blocks: %i\n", blocks);
+    for (int t = 0; t < t_max; t++) {
+        simulateBoundCheckKernel<<<blocks, threadBlockSize>>>(deviceA, deviceB, deviceResult, n);
 
         float *temp = deviceA;
         deviceA = deviceB;

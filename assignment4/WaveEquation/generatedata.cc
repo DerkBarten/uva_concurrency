@@ -26,7 +26,6 @@ void fill(float *array, int offset, int range, float sample_start,
     dx = (sample_end - sample_start) / range;
     for (i = 0; i < range; i++) {
         array[i + offset] = f(sample_start + i * dx);
-        printf("%d: %f %f\n", i+offset, sample_start+i*dx, f(sample_start+i*dx));
     }
 }
 
