@@ -10,7 +10,7 @@
 
 int main(int argc, char *argv[])
 {
-    float *old, *current, *next, *ret;
+    float *old, *current, *next;
     int t_max, i_max, threadBlockSize;
 
     /* Parse commandline args: i_max t_max threadBlockSize */
@@ -92,8 +92,8 @@ int main(int argc, char *argv[])
     }
 
     /* Call the actual simulation that should be implemented in simulate.c. */
-    ret = simulate(i_max, t_max, threadBlockSize, old, current, next);
-    file_write_double_array("result.txt", ret, i_max);
+    simulate(i_max, t_max, threadBlockSize, old, current, next);
+    file_write_double_array("result.txt", next, i_max);
 
     free(old);
     free(current);

@@ -1,8 +1,5 @@
 PROGNAME = main
-#SRCFILES = main.cpp file.cpp simulate.cpp
-#TARNAME = assign1_2.tgz
-
-RUNARGS = 1000 1000 512 # i_max t_max threadBlockSize, increase this when testing on the DAS4!
+RUNARGS = 1000 1000 512 # i_max t_max threadBlockSize
 
 IMAGEVIEW = display
 NVCC = nvcc
@@ -10,11 +7,6 @@ CC = g++
 
 CU_FLAGS	= -O3 -g --ptxas-options=-v -arch compute_20 -code sm_20
 CC_FLAGS	= -O3 -m64 -Wall
-
-#WARNFLAGS = -Wall -Werror-implicit-function-declaration -Wshadow \
-		  -Wstrict-prototypes -pedantic-errors
-#CFLAGS = -std=c99 -ggdb -O2 $(WARNFLAGS) -D_POSIX_C_SOURCE=200112 -fopenmp
-#LFLAGS = -lm -lrt
 
 CU_MAIN	= main.cu
 CU_SOURCES = simulate.cu
@@ -54,15 +46,8 @@ plot: result.txt
 	gnuplot plot.gnp
 	$(IMAGEVIEW) plot.png
 
-#dist:
-#	tar cvzf $(TARNAME) Makefile *.c *.h data/
-
 clean:
 	rm -fv $(PROGNAME) *.o $(TARNAME) result.txt plot.png vector-add
-
-
-
-#CU_FLAGS	= -O3 -g -deviceemu
 
 
 

@@ -6,29 +6,14 @@
 #include "timer.h"
 #include <iostream>
 
-// TODO:
-// Some sort of nondeterministic bug
-// Different mode support
-// different threadblocksize support
-// working modes
-
 using namespace std;
 
 /* Modes:
- * 0: Checking for out of bounds  
+ * 0: Checking for array bounds in the kernel
+ * 1: No checking for array bounds in the kernel (removes the if statement)
  */
 int MODE = 0;
 
-/* Utility function, use to do error checking.
-
-   Use this function like this:
-
-   checkCudaCall(cudaMalloc((void **) &deviceRGB, imgS * sizeof(color_t)));
-
-   And to check the result of a kernel invocation:
-
-   checkCudaCall(cudaGetLastError());
-*/
 static void checkCudaCall(cudaError_t result) {
     if (result != cudaSuccess) {
         cerr << "cuda error: " << cudaGetErrorString(result) << endl;
@@ -65,24 +50,28 @@ int createDevices(void  **deviceA, void**deviceB, void**deviceResult, int size) 
 }
 
 
-
+/* The simulation kernel without array bound checking */
 __global__ void simulateNoBoundCheckKernel(float* old, float* current, float* next) {
     unsigned index = blockIdx.x * blockDim.x + threadIdx.x;
-        next[index] = 2.0 * current[index] - old[index] + 0.15 * 
-            (current[index - 1] - (2.0 * current[index] - current[index + 1]));
+    next[index] = 2.0 * current[index] - old[index] + 0.15 * 
+        (current[index - 1] - (2.0 * current[index] - current[index + 1]));
 
 }
 
+/* 
+ * This function performs the wave equation simulation without the need to
+ * check the bounds of the arrays in the kernel. 
+ */
 void simulateNoBoundCheck(int n, float* a, float* b, float* result, int t_max, int threadBlockSize) {
+    // Calculate the padding size to make the datapoint array a multiple of the
+    // thread block size
     int padding = 0;
-
-    
     if ( n % threadBlockSize != 0) {
         padding = threadBlockSize - (n % threadBlockSize);
+        // A float of extra padding to make sure the last thread does not access
+        // memory that is not allocated
+        padding += 1; 
     }
-    padding += 2; // padding because otherwise segmentation errors
-    
-
     int size = n * sizeof(float) + padding * sizeof(float); 
 
     fprintf(stderr, "Size: %i\n", size);
@@ -103,35 +92,34 @@ void simulateNoBoundCheck(int n, float* a, float* b, float* result, int t_max, i
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
 
-    checkCudaCall(cudaMemcpy(deviceA + 1, a, n*sizeof(float), cudaMemcpyHostToDevice));
-    checkCudaCall(cudaMemcpy(deviceB + 1, b, n*sizeof(float), cudaMemcpyHostToDevice));
-    
+    // Copy the datapoint arrays to the gpu
+    checkCudaCall(cudaMemcpy(deviceA, a, n*sizeof(float), cudaMemcpyHostToDevice));
+    checkCudaCall(cudaMemcpy(deviceB, b, n*sizeof(float), cudaMemcpyHostToDevice));
  
-    fprintf(stderr, "Test before record\n");
     cudaEventRecord(start, 0);
-    fprintf(stderr, "Test after record\n");
-    fprintf(stderr, "DeviceA minus one: %p\n", deviceA - 1);
-    *(deviceA) = 0.0f;
-    *(deviceB) = 0.0f;
-    *(deviceResult) = 0.0f;
-    fprintf(stderr, "Test after devices\n");
 
+    // Increase the arrays on the gpu by one location because we do not want
+    // the first index to access memory that is not allocated.
     deviceA++;
     deviceB++;
     deviceResult++;
 
+    float zero = 0.0;
     for (int t = 0; t < t_max; t++) {
-        fprintf(stderr, "Test before kernel\n");
         simulateNoBoundCheckKernel<<<ceil(n/(float)threadBlockSize), threadBlockSize>>>(deviceA, deviceB, deviceResult);
-        deviceResult[n - 2] = 0.0;
-        deviceResult[1] = 0.0;
+
+        // Overwrite the right most datapoint with a zero to keep the random data
+        // in the padding from interfering with the actual datapoints
+        fprintf(stderr, "Test before zero cpy\n");
+        checkCudaCall(cudaMemcpy(deviceResult + n - 1, &zero, sizeof(float), cudaMemcpyHostToDevice));
+        fprintf(stderr, "Test after zero cpy\n");
+        // The program throws an error on the memory copy, most likely due to
+        // unaligned memory access.
 
         float *temp = deviceA;
         deviceA = deviceB;
         deviceB = deviceResult;
         deviceResult = temp;
-
-        fprintf(stderr, "In cycle: %i\n", t);
     }
     deviceA--;
     deviceB--;
@@ -141,7 +129,8 @@ void simulateNoBoundCheck(int n, float* a, float* b, float* result, int t_max, i
     // check whether the kernel invocation was successful
     checkCudaCall(cudaGetLastError());
     
-    checkCudaCall(cudaMemcpy(result, deviceB + 1, n * sizeof(float), cudaMemcpyDeviceToHost));
+    // n - 1 because we ignored the first float when we copied to the device
+    checkCudaCall(cudaMemcpy(result, deviceB, (n - 1) * sizeof(float), cudaMemcpyDeviceToHost));
 
     checkCudaCall(cudaFree(deviceA));
     checkCudaCall(cudaFree(deviceB));
@@ -155,15 +144,20 @@ void simulateNoBoundCheck(int n, float* a, float* b, float* result, int t_max, i
 
 }
 
+/* The simulation kernel with array bound checking */
 __global__ void simulateBoundCheckKernel(float* old, float* current, float* next, int i_max) {
     unsigned index = blockIdx.x * blockDim.x + threadIdx.x;
-    
-        if (index > 0 && index < i_max - 1){
-            next[index] = 2.0 * current[index] - old[index] + 0.15 * 
-                (current[index - 1] - (2.0 * current[index] - current[index + 1]));
-        }          
+    // The wave equation with 
+    if (index > 0 && index < i_max - 1){
+        next[index] = 2.0 * current[index] - old[index] + 0.15 * 
+            (current[index - 1] - (2.0 * current[index] - current[index + 1]));
+    }          
 }
 
+/* 
+ * This function performs the wave equation simulation and needs to check the
+ * bounds of the arrays in the kernel. 
+ */
 void simulateBoundCheck(int n, float* a, float* b, float* result, int t_max, int threadBlockSize) {
     int size = n * sizeof(float); 
 
@@ -184,13 +178,14 @@ void simulateBoundCheck(int n, float* a, float* b, float* result, int t_max, int
 
     checkCudaCall(cudaMemcpy(deviceA, a, size, cudaMemcpyHostToDevice));
     checkCudaCall(cudaMemcpy(deviceB, b, size, cudaMemcpyHostToDevice));
-
+    
     cudaEventRecord(start, 0);
     int blocks = ceil((float)n/(float)threadBlockSize);
 
-    printf("blocks: %i\n", blocks);
     for (int t = 0; t < t_max; t++) {
         simulateBoundCheckKernel<<<blocks, threadBlockSize>>>(deviceA, deviceB, deviceResult, n);
+        // Make sure the kernels are finished before swapping the buffers
+        checkCudaCall(cudaDeviceSynchronize());
 
         float *temp = deviceA;
         deviceA = deviceB;
@@ -198,11 +193,12 @@ void simulateBoundCheck(int n, float* a, float* b, float* result, int t_max, int
         deviceResult = temp;
     }
     cudaEventRecord(stop, 0);
-   
+    
     // check whether the kernel invocation was successful
     checkCudaCall(cudaGetLastError());
-    checkCudaCall(cudaMemcpy(result, deviceB, size, cudaMemcpyDeviceToHost));
 
+    checkCudaCall(cudaMemcpy(result, deviceB, size, cudaMemcpyDeviceToHost));
+    
     checkCudaCall(cudaFree(deviceA));
     checkCudaCall(cudaFree(deviceB));
     checkCudaCall(cudaFree(deviceResult));
@@ -215,8 +211,9 @@ void simulateBoundCheck(int n, float* a, float* b, float* result, int t_max, int
 }
 
 
-float *simulate(const int i_max, const int t_max, const int threadBlockSize,
+void simulate(const int i_max, const int t_max, const int threadBlockSize,
                 float *old_array, float *current_array, float *next_array) {
+    // Call the appropriate simulation function for the mode
     switch(MODE) {
         case 0:
             simulateBoundCheck(i_max, old_array, current_array, next_array, t_max, threadBlockSize);
@@ -226,9 +223,6 @@ float *simulate(const int i_max, const int t_max, const int threadBlockSize,
             break;
         default:
             fprintf(stderr, "ERROR: No valid mode specified");
-            break;
-        
+            break; 
     }
-                     
-    return next_array;
 }
