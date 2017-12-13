@@ -9,6 +9,8 @@ int main(int argc, char *argv[]) {
 
         load_image(argv[1], &input);
         rgb_to_grayscale(&input, &output);
+        contrast_modification(&output);
+        triangular_smoothing(&output); 
         save_image(argv[2], &output);
 
         // Free the data array in the image object

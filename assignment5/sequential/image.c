@@ -29,6 +29,7 @@ void unload_image(image_t *image) {
 int rgb_to_grayscale(image_t *input, image_t *output) {
     if (input->n != 3 && input->n != 4) {
         printf("ERROR: This function only supports 3 and 4 channels\n");
+        return 0;
     }
     // Initialize the output image object
     output->data = (unsigned char*)malloc(sizeof(unsigned char) * input->w * input->h);
@@ -47,6 +48,59 @@ int rgb_to_grayscale(image_t *input, image_t *output) {
             unsigned char gray = (r + g + b) / 3;
             // Set the corresponding output pixel to the grayscale vaue
             output->data[i * input->w + j] = gray;
+        }
+    }
+    return 1;
+}
+
+int contrast_modification(image_t *image) {
+    if (image->n != 1) {
+        return 0;
+    }
+    int brightness = 0;
+    int size = image->w * image->h;
+    
+    for (int i = 0; i < size; i++) {
+        brightness += image->data[i];
+    }
+    float mean = floor((float)brightness / (float)size) / 255.0;
+    float value;
+
+    // TODO: might speedup if no conversions inside loop
+    for (int i = 0; i < size; i++) {
+        value = image->data[i] / 255.0; 
+        if (value > mean) {
+            image->data[i] = (unsigned char)((pow(value - mean, 0.5) / pow(1.0 - mean, 0.5)) * 255.0);
+        }
+        else {
+            image->data[i] = 0;
+        }
+    }
+}
+
+
+
+int triangular_smoothing(image_t *image) {
+    unsigned char T[5][5] = {{1, 2, 3, 2, 1},
+                             {2, 4, 6, 4, 2},
+                             {3, 6, 9, 6, 3},
+                             {2, 4, 6, 4, 2},
+                             {1, 2, 3, 2, 1}};
+
+    // Loop over every pixel
+    for (int i = 0; i < image->h; i++) {
+        for (int j = 0; j < image->w; j++) {
+            
+            unsigned int sum = 0;
+            // Loop over the neighbourhood
+            for (int k = 0; k < 5; k++) {
+                for (int l = 0; l < 5; l++) {
+                    //TODO: segmentation fault
+                    sum += T[k][l] * 
+                    image->data[(((i + k - 2) % image->h) * image->w)  + (j + l - 2) % image->w];
+                }
+            }
+            image->data[i * image->w + j] = sum / 81;
         }
     }
 }
