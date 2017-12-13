@@ -78,7 +78,11 @@ int contrast_modification(image_t *image) {
     }
 }
 
-
+int mod(int a, int b)
+{
+    int r = a % b;
+    return r < 0 ? r + b : r;
+}
 
 int triangular_smoothing(image_t *image) {
     unsigned char T[5][5] = {{1, 2, 3, 2, 1},
@@ -95,9 +99,8 @@ int triangular_smoothing(image_t *image) {
             // Loop over the neighbourhood
             for (int k = 0; k < 5; k++) {
                 for (int l = 0; l < 5; l++) {
-                    //TODO: segmentation fault
                     sum += T[k][l] * 
-                    image->data[(((i + k - 2) % image->h) * image->w)  + (j + l - 2) % image->w];
+                    image->data[mod(i + k - 2, image->h) * image->w  + mod(j + l - 2, image->w)];
                 }
             }
             image->data[i * image->w + j] = sum / 81;
