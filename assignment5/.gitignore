@@ -1,0 +1,5 @@
+examples/*
+main
+*.o
+*.png
+*.json
