@@ -14,7 +14,7 @@ C_FLAGS= -std=c99
 LINKER_FLAGS=-lm -lcuda
 
 PROGRAM_NAME=main
-RUNARGS=images/small.jpg output.png
+RUNARGS=images/kitten.jpg output.png
 
 .PHONY: all clean
 

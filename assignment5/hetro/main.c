@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
         load_image(argv[1], &input);
         grayscale(&input, &output);
         contrast(&output);
-        //triangular_smoothing(&output); 
+        smoothing(&output); 
         save_image(argv[2], &output);
 
         // Free the data array in the image object

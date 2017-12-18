@@ -115,3 +115,57 @@ void contrast(image_t *image) {
 
     gpuErrchk(cudaFree(device));
 }
+
+__device__
+int mod(int a, int b)
+{
+    int r = a % b;
+    return r < 0 ? r + b : r;
+}
+
+__global__
+void smoothingKernel(int pixels, int width, int height, byte *input, byte *output) {
+    int thread_index = blockIdx.x*blockDim.x + threadIdx.x;
+    // The weights of the neighbourhood values, the sum is 81
+    byte T[25] = {1, 2, 3, 2, 1, 2, 4, 6, 4, 2, 3, 6, 9, 6, 3, 2, 4, 6, 4, 2, 1, 2, 3, 2, 1};
+
+    if (thread_index < pixels) {
+        unsigned int sum = 0;
+        // Loop over the neighbourhood
+        for (int i = 0; i < 25; i++) {
+                int row = i / 5;
+                int column = i % 5;
+                int index = mod(thread_index + column - 2  + (row - 2) * width, pixels);
+
+                sum += T[row * 5 + column] * input[index];
+        }
+        output[thread_index] = sum / 81;
+    }
+}
+
+extern "C"
+void smoothing(image_t *image) {
+    int pixels = image->w * image->h;
+    int threadBlockSize = 1024;
+    int threadBlocks = ceil((float)pixels / (float)threadBlockSize);
+    
+    byte *d_in = NULL;
+    byte *d_out = NULL;
+    
+    gpuErrchk(cudaMalloc(&d_in, pixels * sizeof(byte)));
+    gpuErrchk(cudaMalloc(&d_out, pixels * sizeof(byte))); 
+    gpuErrchk(cudaMemcpy(d_in, image->data, pixels * sizeof(byte), cudaMemcpyHostToDevice));
+
+    smoothingKernel<<<threadBlocks, threadBlockSize>>>(pixels, image->w, image->h, d_in, d_out);
+    gpuErrchk(cudaGetLastError());
+    
+    // Wait for all kernels to finish
+    gpuErrchk(cudaDeviceSynchronize());
+
+    // Assuming output->data has enough memory allocated
+    gpuErrchk(cudaMemcpy(image->data, d_out, pixels * sizeof(byte), cudaMemcpyDeviceToHost));
+
+    gpuErrchk(cudaFree(d_in));
+    gpuErrchk(cudaFree(d_out));
+
+}
