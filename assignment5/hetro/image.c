@@ -9,6 +9,7 @@
 /* Load the image specified by the filename*/
 int load_image(char *filename, image_t *image) {
     image->data = stbi_load(filename, &image->w, &image->h, &image->n, 0);
+    printf("W: %i H: %i N: %i\n", image->w, image->h, image->n);
     if (image->data != NULL) {
         return 1;
     }

@@ -7,7 +7,7 @@ typedef struct {
     // Width, height, channels
     int w, h, n;
     // Pointer to the image data
-    unsigned char *data;
+    byte *data;
 } image_t;
 
 

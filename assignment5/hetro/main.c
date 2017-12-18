@@ -12,7 +12,7 @@ int main(int argc, char *argv[]) {
         rgb_to_grayscale(&input, &output);
         //contrast_modification(&output);
         //triangular_smoothing(&output); 
-        //save_image(argv[2], &output);
+        save_image(argv[2], &output);
 
         // Free the data array in the image object
         unload_image(&input);

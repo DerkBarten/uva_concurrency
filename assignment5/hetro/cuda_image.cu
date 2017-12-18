@@ -5,20 +5,27 @@ extern "C" {
 #include "cuda_image.cuh"
 }
 
-__global__ 
-void grayscaleKernel(image_t *input, image_t *output){
-    int i = blockIdx.x*blockDim.x + threadIdx.x;
-    int j = i / input->w;
-    i = i % input->w;
+#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
+{
+   if (code != cudaSuccess) 
+   {
+      fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+      if (abort) exit(code);
+   }
+}
 
-    if (j < input->h) {
-        byte r = input->data[(i * input->w + j) * input->n];
-        byte g = input->data[(i * input->w + j) * input->n + 1];
-        byte b = input->data[(i * input->w + j) * input->n + 2];
+__global__ 
+void grayscaleKernel(int pixels, int channels, byte *input, byte *output){
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+
+    if (i < pixels) {
+        byte r = input[i * channels];
+        byte g = input[i * channels + 1];
+        byte b = input[i * channels + 2];
 
         byte gray = (r + g + b) / 3;
-        // Set the corresponding output pixel to the grayscale vaue
-        output->data[i * input->w + j] = gray;
+        output[i] = gray;
     }
 }
 
@@ -27,33 +34,42 @@ void grayscaleKernel(image_t *input, image_t *output){
 extern "C"
 void rgb_to_grayscale(image_t *input, image_t *output) {
     // How many bytes is the image
-    int N = input->w * input->h * input->n;
-    int threadBlockSize = 512;
+    int pixels = input->w * input->h;
+    int bytes = pixels * input->n;
+    int threadBlockSize = 1024;
+    int threadBlocks = ceil((float)pixels / (float)threadBlockSize);
 
+    printf("Tread blocks: %i\n", threadBlocks);
+    printf("Pixels: %i\n", pixels);
+    printf("bytes: %i\n", bytes);
+    printf("sizeof byte: %i\n", sizeof(byte));
+
+    output->data = (byte*)malloc(sizeof(byte) * pixels);
     // Create output image with the same dimensions
-    *output = *input; 
-    output->data = (unsigned char*)malloc(sizeof(unsigned char) * input->w * input->h);
+    output->w = input->w;
+    output->h = input->h;
     // The gray output has only one channel
     output->n = 1;
 
-    byte *d_in;
-    byte *d_out;
+    byte *d_in = NULL;
+    byte *d_out = NULL;
 
-    cudaMalloc((void**)&d_in, N * sizeof(byte)); 
-    cudaMalloc((void**)&d_out, N * sizeof(byte));
+    gpuErrchk(cudaMalloc(&d_in, bytes * sizeof(byte))); 
+    gpuErrchk(cudaMalloc(&d_out, pixels * sizeof(byte)));
+    gpuErrchk(cudaMemcpy(d_in, input->data, bytes * sizeof(byte), cudaMemcpyHostToDevice));
 
-    cudaMemcpy(d_in, input->data, N*sizeof(byte), cudaMemcpyHostToDevice);
+    grayscaleKernel<<<threadBlocks, threadBlockSize>>>(pixels, input->n, d_in, d_out);
 
-    // Create images with pointers to the device buffers
-    image_t d_img_in = *input;
-    d_img_in.data = d_in;
-    image_t d_img_out = *output;
-    d_img_out.data = d_out;
+    // Wait for all kernels to finish
+    gpuErrchk(cudaDeviceSynchronize());
 
-    grayscaleKernel<<<(input->w * input->h) / threadBlockSize, threadBlockSize>>>(&d_img_in, &d_img_out);
     // Assuming output->data has enough memory allocated
-    cudaMemcpy(output->data, d_img_out.data, N * sizeof(byte), cudaMemcpyDeviceToHost);
+    gpuErrchk(cudaMemcpy(output->data, d_out, pixels * sizeof(byte), cudaMemcpyDeviceToHost));
 
-    cudaFree(d_in);
-    cudaFree(d_out);
+    // for (int i = 0; i < 100; i++) {
+    //     printf("%i\n", output->data[i]);
+    // }
+
+    gpuErrchk(cudaFree(d_in));
+    gpuErrchk(cudaFree(d_out));
 }
