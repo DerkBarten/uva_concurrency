@@ -9,8 +9,8 @@ int main(int argc, char *argv[]) {
         image_t output;
 
         load_image(argv[1], &input);
-        rgb_to_grayscale(&input, &output);
-        //contrast_modification(&output);
+        grayscale(&input, &output);
+        contrast(&output);
         //triangular_smoothing(&output); 
         save_image(argv[2], &output);
 

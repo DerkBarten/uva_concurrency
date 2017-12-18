@@ -9,7 +9,6 @@
 /* Load the image specified by the filename*/
 int load_image(char *filename, image_t *image) {
     image->data = stbi_load(filename, &image->w, &image->h, &image->n, 0);
-    printf("W: %i H: %i N: %i\n", image->w, image->h, image->n);
     if (image->data != NULL) {
         return 1;
     }
@@ -54,30 +53,30 @@ void unload_image(image_t *image) {
 //     return 1;
 // }
 
-int contrast_modification(image_t *image) {
-    if (image->n != 1) {
-        return 0;
-    }
-    int brightness = 0;
-    int size = image->w * image->h;
+// int contrast_modification(image_t *image) {
+//     if (image->n != 1) {
+//         return 0;
+//     }
+//     int brightness = 0;
+//     int size = image->w * image->h;
     
-    for (int i = 0; i < size; i++) {
-        brightness += image->data[i];
-    }
-    float mean = floor((float)brightness / (float)size) / 255.0;
-    float value;
+//     for (int i = 0; i < size; i++) {
+//         brightness += image->data[i];
+//     }
+//     float mean = floor((float)brightness / (float)size) / 255.0;
+//     float value;
 
-    // TODO: might speedup if no conversions inside loop
-    for (int i = 0; i < size; i++) {
-        value = image->data[i] / 255.0; 
-        if (value > mean) {
-            image->data[i] = (unsigned char)((pow(value - mean, 0.5) / pow(1.0 - mean, 0.5)) * 255.0);
-        }
-        else {
-            image->data[i] = 0;
-        }
-    }
-}
+//     // TODO: might speedup if no conversions inside loop
+//     for (int i = 0; i < size; i++) {
+//         value = image->data[i] / 255.0; 
+//         if (value > mean) {
+//             image->data[i] = (unsigned char)((pow(value - mean, 0.5) / pow(1.0 - mean, 0.5)) * 255.0);
+//         }
+//         else {
+//             image->data[i] = 0;
+//         }
+//     }
+// }
 
 int mod(int a, int b)
 {

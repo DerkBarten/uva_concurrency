@@ -1,3 +1,5 @@
 #include "image.h"
 
-void rgb_to_grayscale(image_t *input, image_t *output);
+void grayscale(image_t *input, image_t *output);
+
+void contrast(image_t *image);

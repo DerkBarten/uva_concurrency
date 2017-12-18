@@ -32,17 +32,12 @@ void grayscaleKernel(int pixels, int channels, byte *input, byte *output){
 
 /* Writes the results to image_t output */
 extern "C"
-void rgb_to_grayscale(image_t *input, image_t *output) {
+void grayscale(image_t *input, image_t *output) {
     // How many bytes is the image
     int pixels = input->w * input->h;
     int bytes = pixels * input->n;
     int threadBlockSize = 1024;
     int threadBlocks = ceil((float)pixels / (float)threadBlockSize);
-
-    printf("Tread blocks: %i\n", threadBlocks);
-    printf("Pixels: %i\n", pixels);
-    printf("bytes: %i\n", bytes);
-    printf("sizeof byte: %i\n", sizeof(byte));
 
     output->data = (byte*)malloc(sizeof(byte) * pixels);
     // Create output image with the same dimensions
@@ -66,10 +61,57 @@ void rgb_to_grayscale(image_t *input, image_t *output) {
     // Assuming output->data has enough memory allocated
     gpuErrchk(cudaMemcpy(output->data, d_out, pixels * sizeof(byte), cudaMemcpyDeviceToHost));
 
-    // for (int i = 0; i < 100; i++) {
-    //     printf("%i\n", output->data[i]);
-    // }
-
     gpuErrchk(cudaFree(d_in));
     gpuErrchk(cudaFree(d_out));
+}
+
+__global__ 
+void contrastKernel(int pixels, int mean, byte* data) {
+    int i = blockIdx.x*blockDim.x + threadIdx.x;
+
+    if (i < pixels) { 
+        if (data[i] > mean) {
+            data[i] = (byte)((pow((float)(data[i] - mean) / 255.0f, 0.5f) / 
+                              pow(1.0f - ((float)mean / 255.0f), 0.5f))
+                              * 255.0f);
+        }
+        else {
+            data[i] = 0;
+        }
+    }
+}
+
+extern "C"
+void contrast(image_t *image) {
+    // Only use contrast on grayscale images
+    if (image->n != 1) {
+        return;
+    }
+
+    int brightness = 0;
+    int pixels = image->w * image->h;
+    int threadBlockSize = 1024;
+    int threadBlocks = ceil((float)pixels / (float)threadBlockSize);
+    
+    for (int i = 0; i < pixels; i++) {
+        brightness += image->data[i];
+    }
+
+    int mean = brightness / pixels;
+
+    byte *device = NULL;
+
+    gpuErrchk(cudaMalloc(&device, pixels * sizeof(byte))); 
+    gpuErrchk(cudaMemcpy(device, image->data, pixels * sizeof(byte), cudaMemcpyHostToDevice));
+
+    contrastKernel<<<threadBlocks, threadBlockSize>>>(pixels, mean, device);
+    gpuErrchk(cudaGetLastError());
+    
+    // Wait for all kernels to finish
+    gpuErrchk(cudaDeviceSynchronize());
+
+    // Assuming output->data has enough memory allocated
+    gpuErrchk(cudaMemcpy(image->data, device, pixels * sizeof(byte), cudaMemcpyDeviceToHost));
+
+    gpuErrchk(cudaFree(device));
 }
