@@ -3,9 +3,9 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 #include "image.h"
+#include "timer.h"
 
 #include <math.h>
-
 #include "omp.h"
 
 /* Load the image specified by the filename*/
@@ -35,6 +35,8 @@ int openMP_grayscale(image_t *input, image_t *output) {
         printf("ERROR: This function only supports 3 and 4 channels\n");
         return 0;
     }
+
+    double time;
     // Initialize the output image object
     output->data = (byte*)malloc(sizeof(byte) * input->w * input->h);
     output->w = input->w;
@@ -44,19 +46,31 @@ int openMP_grayscale(image_t *input, image_t *output) {
     // Iterate over every pixel in the input image
     // set the number of threads that we'll use
     //  
-    #pragma omp parallel for collapse(2);
-    for (int i = 0; i < input->h; i++) {
-        for (int j = 0; j < input->w; j++) {
-            byte r = input->data[(i * input->w + j) * input->n];
-            byte g = input->data[(i * input->w + j) * input->n + 1];
-            byte b = input->data[(i * input->w + j) * input->n + 2];
+
+    int bla = omp_get_max_threads();
+    printf("max number of threads %d\n", bla );
+    timer_start();
+    int i, j;
+    byte r,g,b,gray;
+    #pragma omp parallel for private(r,g,b,gray,j) firstprivate(output)
+    for (i = 0; i < input->h; i++) {
+        for (j = 0; j < input->w; j++) {
+             r = input->data[(i * input->w + j) * input->n];
+             g = input->data[(i * input->w + j) * input->n + 1];
+             b = input->data[(i * input->w + j) * input->n + 2];
 
             // Calculate the grayscale value
-            byte gray = (r + g + b) / 3;
-            // Set the corresponding output pixel to the grayscale vaue
+             gray = (r + g + b) / 3;
+            // Set the corresponding output pixel to the grayscale value
             output->data[i * input->w + j] = gray;
+            
         }
-    }
+        //printf("execution of %d terminated\n", omp_get_num_threads());  
+    } 
+    
+        //   
+    time = timer_end();
+    printf("openmp_grayscale took %g seconds\n", time);
     return 1;
 }
 
@@ -64,18 +78,21 @@ int openMP_contrast(image_t *image) {
     if (image->n != 1) {
         return 0;
     }
+    double time;
     int brightness = 0;
     int size = image->w * image->h;
-    
-    for (int i = 0; i < size; i++) {
+    int i;
+    #pragma omp parallel for reduction(+:brightness)
+    for (i = 0; i < size; i++) {
         brightness += image->data[i];
     }
     float mean = floor((float)brightness / (float)size) / 255.0;
     float value;
 
     // TODO: might speedup if no conversions inside loop
-    #pragma omp parallel for;
-    for (int i = 0; i < size; i++) {
+    timer_start();
+    #pragma omp parallel for private(value) firstprivate(image)
+    for (i = 0; i < size; i++) {
         value = image->data[i] / 255.0; 
         if (value > mean) {
             image->data[i] = (byte)((pow(value - mean, 0.5) / pow(1.0 - mean, 0.5)) * 255.0);
@@ -84,6 +101,8 @@ int openMP_contrast(image_t *image) {
             image->data[i] = 0;
         }
     }
+    time = timer_end();
+    printf("openmp_constrast took %g seconds\n", time);
 }
 
 int mod(int a, int b)
@@ -98,16 +117,20 @@ int openMP_smoothing(image_t *image) {
                              {3, 6, 9, 6, 3},
                              {2, 4, 6, 4, 2},
                              {1, 2, 3, 2, 1}};
-
+    int i,j,k,l;
+    double time;
+    unsigned int sum;
     // Loop over every pixel
-    #pragma omp parallel for collapse(4);
-    for (int i = 0; i < image->h; i++) {
-        #pragma private(j, k, l);
-        for (int j = 0; j < image->w; j++) {    
-            unsigned int sum = 0;
+    // private variables
+    timer_start();
+    #pragma omp parallel for private(j,k,l) firstprivate(image) reduction(+:sum)
+    for ( i = 0; i < image->h; i++) {
+        for ( j = 0; j < image->w; j++) {    
+            sum = 0;
             // Loop over the neighbourhood
-            for (int k = 0; k < 5; k++) {
-                for (int l = 0; l < 5; l++) {
+            for ( k = 0; k < 5; k++) {
+                for (l = 0; l < 5; l++) {
+                    // reduction 
                     sum += T[k][l] * 
                     image->data[mod(i + k - 2, image->h) * image->w  + mod(j + l - 2, image->w)];
                 }
@@ -115,4 +138,7 @@ int openMP_smoothing(image_t *image) {
             image->data[i * image->w + j] = sum / 81;
         }
     }
+
+    time = timer_end();
+    printf("openmp_smoothing took %g seconds\n", time);
 }

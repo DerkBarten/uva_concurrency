@@ -1,24 +1,27 @@
 CC=gcc
-SRC_FILES=main.c image.c
-OBJ_FILES=main.o image.o
+SRC_FILES=main.c image.c timer.c
+OBJ_FILES=main.o image.o timer.o
 
 LINKER_FLAGS=-lm
+MPFLAGS = -fopenmp
 
 PROGRAM_NAME=main
-RUNARGS = kitten.jpg output.png
+RUNARGS = hubble.jpg output.png
 .PHONY: all clean
 
+runlocal: $(PROGRAM_NAME)
+	./$(PROGRAM_NAME) $(RUNARGS) 
+
 run: $(PROGRAM_NAME)
-	./$(PROGRAM_NAME) $(RUNARGS)
-	display output.png
+	prun -v -np 1 ./$(PROGRAM_NAME) $(RUNARGS)
 
 all: $(OBJ_FILES) $(PROGRAM_NAME)
 
 %.o: %.c
-	$(CC) -c $<
+	$(CC) $(MPFLAGS) -c $<
 
 $(PROGRAM_NAME): $(OBJ_FILES)
-	$(CC)  $^ $(LINKER_FLAGS) -o $@
+	$(CC) $^ $(LINKER_FLAGS) $(MPFLAGS)  -o  $@
 
 clean:
 	rm -rf *.o $(PROGRAM_NAME)
