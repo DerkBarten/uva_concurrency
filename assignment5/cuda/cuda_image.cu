@@ -161,3 +161,10 @@ void cuda_smoothing(image_t *image) {
     gpuErrchk(cudaFree(d_out));
 
 }
+
+extern "C"
+void cuda_image(image_t *input, image_t *output) {
+    cuda_grayscale(input, output);
+    cuda_contrast(output);
+    cuda_smoothing(output);
+}

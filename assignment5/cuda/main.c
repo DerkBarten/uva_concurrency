@@ -9,9 +9,7 @@ int main(int argc, char *argv[]) {
         image_t output;
 
         load_image(argv[1], &input);
-        cuda_grayscale(&input, &output);
-        cuda_contrast(&output);
-        cuda_smoothing(&output); 
+        cuda_image(&input, &output);
         save_image(argv[2], &output);
 
         // Free the data array in the image object
