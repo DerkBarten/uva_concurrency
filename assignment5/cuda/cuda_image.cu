@@ -24,6 +24,7 @@ void grayscaleKernel(int pixels, int channels, byte *input, byte *output){
         byte g = input[i * channels + 1];
         byte b = input[i * channels + 2];
 
+        // Use three to ignore the alpha channel
         byte gray = (r + g + b) / 3;
         output[i] = gray;
     }

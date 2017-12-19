@@ -66,8 +66,7 @@ int contrast(image_t *image) {
     }
     float mean = floor((float)brightness / (float)size) / 255.0;
     float value;
-
-    // TODO: might speedup if no conversions inside loop
+    
     for (int i = 0; i < size; i++) {
         value = image->data[i] / 255.0; 
         if (value > mean) {

@@ -29,8 +29,9 @@ all: $(C_OBJ_FILES) $(CU_OBJ_FILES) $(PROGRAM_NAME)
 $(PROGRAM_NAME): $(C_OBJ_FILES) $(CU_OBJ_FILES)
 	$(NVCC) $(CU_FLAGS) $(LINKER_FLAGS) $^ -o $@
 
-run: $(PROGNAME)
+run: $(PROGRAM_NAME)
 	prun -v -np 1 -native '-l gpu=GTX480' ./$(PROGRAM_NAME) $(RUNARGS)
+	display output.png
 
 clean:
 	rm -rf *.o $(PROGRAM_NAME)
