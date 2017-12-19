@@ -26,13 +26,13 @@ void unload_image(image_t *image) {
 }
 
 /* Convert a rgb image to a grayscale image */
-int rgb_to_grayscale(image_t *input, image_t *output) {
+int grayscale(image_t *input, image_t *output) {
     if (input->n != 3 && input->n != 4) {
         printf("ERROR: This function only supports 3 and 4 channels\n");
         return 0;
     }
     // Initialize the output image object
-    output->data = (unsigned char*)malloc(sizeof(unsigned char) * input->w * input->h);
+    output->data = (byte*)malloc(sizeof(byte) * input->w * input->h);
     output->w = input->w;
     output->h = input->h;
     output->n = 1;
@@ -40,12 +40,12 @@ int rgb_to_grayscale(image_t *input, image_t *output) {
     // Iterate over every pixel in the input image
     for (int i = 0; i < input->h; i++) {
         for (int j = 0; j < input->w; j++) {
-            unsigned char r = input->data[(i * input->w + j) * input->n];
-            unsigned char g = input->data[(i * input->w + j) * input->n + 1];
-            unsigned char b = input->data[(i * input->w + j) * input->n + 2];
+            byte r = input->data[(i * input->w + j) * input->n];
+            byte g = input->data[(i * input->w + j) * input->n + 1];
+            byte b = input->data[(i * input->w + j) * input->n + 2];
 
             // Calculate the grayscale value
-            unsigned char gray = (r + g + b) / 3;
+            byte gray = (r + g + b) / 3;
             // Set the corresponding output pixel to the grayscale vaue
             output->data[i * input->w + j] = gray;
         }
@@ -53,7 +53,7 @@ int rgb_to_grayscale(image_t *input, image_t *output) {
     return 1;
 }
 
-int contrast_modification(image_t *image) {
+int contrast(image_t *image) {
     if (image->n != 1) {
         return 0;
     }
@@ -70,7 +70,7 @@ int contrast_modification(image_t *image) {
     for (int i = 0; i < size; i++) {
         value = image->data[i] / 255.0; 
         if (value > mean) {
-            image->data[i] = (unsigned char)((pow(value - mean, 0.5) / pow(1.0 - mean, 0.5)) * 255.0);
+            image->data[i] = (byte)((pow(value - mean, 0.5) / pow(1.0 - mean, 0.5)) * 255.0);
         }
         else {
             image->data[i] = 0;
@@ -84,8 +84,8 @@ int mod(int a, int b)
     return r < 0 ? r + b : r;
 }
 
-int triangular_smoothing(image_t *image) {
-    unsigned char T[5][5] = {{1, 2, 3, 2, 1},
+int smoothing(image_t *image) {
+    byte T[5][5] = {{1, 2, 3, 2, 1},
                              {2, 4, 6, 4, 2},
                              {3, 6, 9, 6, 3},
                              {2, 4, 6, 4, 2},

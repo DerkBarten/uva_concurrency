@@ -32,7 +32,7 @@ void grayscaleKernel(int pixels, int channels, byte *input, byte *output){
 
 /* Writes the results to image_t output */
 extern "C"
-void grayscale(image_t *input, image_t *output) {
+void cuda_grayscale(image_t *input, image_t *output) {
     // How many bytes is the image
     int pixels = input->w * input->h;
     int bytes = pixels * input->n;
@@ -54,11 +54,9 @@ void grayscale(image_t *input, image_t *output) {
     gpuErrchk(cudaMemcpy(d_in, input->data, bytes * sizeof(byte), cudaMemcpyHostToDevice));
 
     grayscaleKernel<<<threadBlocks, threadBlockSize>>>(pixels, input->n, d_in, d_out);
-
-    // Wait for all kernels to finish
+    gpuErrchk(cudaGetLastError());
+    
     gpuErrchk(cudaDeviceSynchronize());
-
-    // Assuming output->data has enough memory allocated
     gpuErrchk(cudaMemcpy(output->data, d_out, pixels * sizeof(byte), cudaMemcpyDeviceToHost));
 
     gpuErrchk(cudaFree(d_in));
@@ -71,9 +69,9 @@ void contrastKernel(int pixels, int mean, byte* data) {
 
     if (i < pixels) { 
         if (data[i] > mean) {
-            data[i] = (byte)((pow((float)(data[i] - mean) / 255.0f, 0.5f) / 
-                              pow(1.0f - ((float)mean / 255.0f), 0.5f))
-                              * 255.0f);
+            float d1 = (float)(data[i] - mean) / 255.0f;
+            float d2 = 1.0f - ((float)mean / 255.0f);
+            data[i] = (byte)((pow(d1, 0.5f) / pow(d2, 0.5f))* 255.0f);
         }
         else {
             data[i] = 0;
@@ -82,7 +80,7 @@ void contrastKernel(int pixels, int mean, byte* data) {
 }
 
 extern "C"
-void contrast(image_t *image) {
+void cuda_contrast(image_t *image) {
     // Only use contrast on grayscale images
     if (image->n != 1) {
         return;
@@ -107,10 +105,7 @@ void contrast(image_t *image) {
     contrastKernel<<<threadBlocks, threadBlockSize>>>(pixels, mean, device);
     gpuErrchk(cudaGetLastError());
     
-    // Wait for all kernels to finish
     gpuErrchk(cudaDeviceSynchronize());
-
-    // Assuming output->data has enough memory allocated
     gpuErrchk(cudaMemcpy(image->data, device, pixels * sizeof(byte), cudaMemcpyDeviceToHost));
 
     gpuErrchk(cudaFree(device));
@@ -144,7 +139,7 @@ void smoothingKernel(int pixels, int width, int height, byte *input, byte *outpu
 }
 
 extern "C"
-void smoothing(image_t *image) {
+void cuda_smoothing(image_t *image) {
     int pixels = image->w * image->h;
     int threadBlockSize = 1024;
     int threadBlocks = ceil((float)pixels / (float)threadBlockSize);
@@ -159,10 +154,7 @@ void smoothing(image_t *image) {
     smoothingKernel<<<threadBlocks, threadBlockSize>>>(pixels, image->w, image->h, d_in, d_out);
     gpuErrchk(cudaGetLastError());
     
-    // Wait for all kernels to finish
     gpuErrchk(cudaDeviceSynchronize());
-
-    // Assuming output->data has enough memory allocated
     gpuErrchk(cudaMemcpy(image->data, d_out, pixels * sizeof(byte), cudaMemcpyDeviceToHost));
 
     gpuErrchk(cudaFree(d_in));
