@@ -7,9 +7,9 @@ int main(int argc, char *argv[]) {
         image_t output;
 
         load_image(argv[1], &input);
-        grayscale(&input, &output);
-        contrast(&output);
-        smoothing(&output); 
+        openMP_grayscale(&input, &output);
+        openMP_contrast(&output);
+        openMP_smoothing(&output); 
         save_image(argv[2], &output);
 
         // Free the data array in the image object

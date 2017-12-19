@@ -6,6 +6,8 @@
 
 #include <math.h>
 
+#include "omp.h"
+
 /* Load the image specified by the filename*/
 int load_image(char *filename, image_t *image) {
     image->data = stbi_load(filename, &image->w, &image->h, &image->n, 0);
@@ -26,9 +28,10 @@ void unload_image(image_t *image) {
 }
 
 /* Convert a rgb image to a grayscale image */
-int grayscale(image_t *input, image_t *output) {
+int openMP_grayscale(image_t *input, image_t *output) {
     if (input->n != 3 && input->n != 4) {
-        printf("Number of channels: %i\n", output->n);
+
+        printf("number of channels: %d", input->n);
         printf("ERROR: This function only supports 3 and 4 channels\n");
         return 0;
     }
@@ -39,6 +42,9 @@ int grayscale(image_t *input, image_t *output) {
     output->n = 1;
 
     // Iterate over every pixel in the input image
+    // set the number of threads that we'll use
+    //  
+    #pragma omp parallel for collapse(2);
     for (int i = 0; i < input->h; i++) {
         for (int j = 0; j < input->w; j++) {
             byte r = input->data[(i * input->w + j) * input->n];
@@ -54,7 +60,7 @@ int grayscale(image_t *input, image_t *output) {
     return 1;
 }
 
-int contrast(image_t *image) {
+int openMP_contrast(image_t *image) {
     if (image->n != 1) {
         return 0;
     }
@@ -68,6 +74,7 @@ int contrast(image_t *image) {
     float value;
 
     // TODO: might speedup if no conversions inside loop
+    #pragma omp parallel for;
     for (int i = 0; i < size; i++) {
         value = image->data[i] / 255.0; 
         if (value > mean) {
@@ -85,7 +92,7 @@ int mod(int a, int b)
     return r < 0 ? r + b : r;
 }
 
-int smoothing(image_t *image) {
+int openMP_smoothing(image_t *image) {
     byte T[5][5] = {{1, 2, 3, 2, 1},
                              {2, 4, 6, 4, 2},
                              {3, 6, 9, 6, 3},
@@ -93,9 +100,10 @@ int smoothing(image_t *image) {
                              {1, 2, 3, 2, 1}};
 
     // Loop over every pixel
+    #pragma omp parallel for collapse(4);
     for (int i = 0; i < image->h; i++) {
-        for (int j = 0; j < image->w; j++) {
-            
+        #pragma private(j, k, l);
+        for (int j = 0; j < image->w; j++) {    
             unsigned int sum = 0;
             // Loop over the neighbourhood
             for (int k = 0; k < 5; k++) {
