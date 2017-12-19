@@ -43,16 +43,10 @@ int openMP_grayscale(image_t *input, image_t *output) {
     output->h = input->h;
     output->n = 1;
 
-    // Iterate over every pixel in the input image
-    // set the number of threads that we'll use
-    //  
-
-    int bla = omp_get_max_threads();
-    printf("max number of threads %d\n", bla );
     timer_start();
     int i, j;
     byte r,g,b,gray;
-    #pragma omp parallel for private(r,g,b,gray,j) firstprivate(output)
+    #pragma omp parallel for private(r,g,b,gray,j) shared(output)
     for (i = 0; i < input->h; i++) {
         for (j = 0; j < input->w; j++) {
              r = input->data[(i * input->w + j) * input->n];
@@ -63,12 +57,8 @@ int openMP_grayscale(image_t *input, image_t *output) {
              gray = (r + g + b) / 3;
             // Set the corresponding output pixel to the grayscale value
             output->data[i * input->w + j] = gray;
-            
         }
-        //printf("execution of %d terminated\n", omp_get_num_threads());  
     } 
-    
-        //   
     time = timer_end();
     printf("openmp_grayscale took %g seconds\n", time);
     return 1;
@@ -120,8 +110,6 @@ int openMP_smoothing(image_t *image) {
     int i,j,k,l;
     double time;
     unsigned int sum;
-    // Loop over every pixel
-    // private variables
     timer_start();
     #pragma omp parallel for private(j,k,l) firstprivate(image) reduction(+:sum)
     for ( i = 0; i < image->h; i++) {
