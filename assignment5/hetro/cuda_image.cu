@@ -39,13 +39,6 @@ void cuda_grayscale(image_t *input, image_t *output) {
     int threadBlockSize = 1024;
     int threadBlocks = ceil((float)pixels / (float)threadBlockSize);
 
-    output->data = (byte*)malloc(sizeof(byte) * pixels);
-    // Create output image with the same dimensions
-    output->w = input->w;
-    output->h = input->h;
-    // The gray output has only one channel
-    output->n = 1;
-
     byte *d_in = NULL;
     byte *d_out = NULL;
 
@@ -138,8 +131,9 @@ void smoothingKernel(int pixels, int width, int height, byte *input, byte *outpu
     }
 }
 
+// Need to add extra image for boundary conditions
 extern "C"
-void cuda_smoothing(image_t *image) {
+void cuda_smoothing(image_t *image, image_t *original) {
     int pixels = image->w * image->h;
     int threadBlockSize = 1024;
     int threadBlocks = ceil((float)pixels / (float)threadBlockSize);
@@ -151,7 +145,7 @@ void cuda_smoothing(image_t *image) {
     gpuErrchk(cudaMalloc(&d_out, pixels * sizeof(byte))); 
     gpuErrchk(cudaMemcpy(d_in, image->data, pixels * sizeof(byte), cudaMemcpyHostToDevice));
 
-    smoothingKernel<<<threadBlocks, threadBlockSize>>>(pixels, image->w, image->h, d_in, d_out);
+    smoothingKernel<<<threadBlocks, threadBlockSize>>>(pixels, original->w, original->h, d_in, d_out);
     gpuErrchk(cudaGetLastError());
     
     gpuErrchk(cudaDeviceSynchronize());
@@ -163,8 +157,8 @@ void cuda_smoothing(image_t *image) {
 }
 
 extern "C"
-void cuda_image(image_t *input, image_t *output) {
+void cuda_image(image_t *input, image_t *output, image_t *original) {
     cuda_grayscale(input, output);
     cuda_contrast(output);
-    cuda_smoothing(output);
+    cuda_smoothing(output, original);
 }
