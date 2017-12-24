@@ -24,7 +24,7 @@ int openmp_grayscale(image_t *input, image_t *output) {
              b = input->data[(i * input->w + j) * input->n + 2];
 
             // Calculate the grayscale value
-             gray = (r + g + b) / 3;
+            gray = (float)r * 0.299f + (float)g * 0.587f + (float)b * 0.114f;
             // Set the corresponding output pixel to the grayscale value
             output->data[i * input->w + j] = gray;
         }
@@ -32,26 +32,21 @@ int openmp_grayscale(image_t *input, image_t *output) {
     return 1;
 }
 
-int openmp_contrast(image_t *image) {
+int openmp_contrast(image_t *image, int mean) {
     if (image->n != 1) {
         return 0;
     }
-    double time;
-    int brightness = 0;
-    int size = image->w * image->h;
-    int i;
-    #pragma omp parallel for reduction(+:brightness)
-    for (i = 0; i < size; i++) {
-        brightness += image->data[i];
-    }
-    float mean = floor((float)brightness / (float)size) / 255.0;
+
     float value;
+    int size = image->w * image->h;
 
     #pragma omp parallel for private(value) firstprivate(image)
-    for (i = 0; i < size; i++) {
-        value = image->data[i] / 255.0; 
+    for (int i = 0; i < size; i++) {
+        value = image->data[i]; 
         if (value > mean) {
-            image->data[i] = (byte)((pow(value - mean, 0.5) / pow(1.0 - mean, 0.5)) * 255.0);
+            float d1 = (float)(value - mean) / 255.0f;
+            float d2 = 1.0f - ((float)mean / 255.0f);
+            image->data[i] = (byte)((pow(d1, 0.5f) / pow(d2, 0.5f))* 255.0f);
         }
         else {
             image->data[i] = 0;
@@ -89,10 +84,4 @@ int openmp_smoothing(image_t *image, image_t *original) {
             image->data[i * original->w + j] = sum / 81;
         }
     }
-}
-
-void openmp_image(image_t *input, image_t *output, image_t *original) {
-    openmp_grayscale(input, output);
-    openmp_contrast(output);
-    openmp_smoothing(output, original);
 }

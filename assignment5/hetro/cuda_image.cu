@@ -73,23 +73,16 @@ void contrastKernel(int pixels, int mean, byte* data) {
 }
 
 extern "C"
-void cuda_contrast(image_t *image) {
+void cuda_contrast(image_t *image, int mean) {
     // Only use contrast on grayscale images
     if (image->n != 1) {
         return;
     }
 
-    int brightness = 0;
     int pixels = image->w * image->h;
     int threadBlockSize = 1024;
     int threadBlocks = ceil((float)pixels / (float)threadBlockSize);
     
-    for (int i = 0; i < pixels; i++) {
-        brightness += image->data[i];
-    }
-
-    int mean = brightness / pixels;
-
     byte *device = NULL;
 
     gpuErrchk(cudaMalloc(&device, pixels * sizeof(byte))); 
@@ -154,11 +147,4 @@ void cuda_smoothing(image_t *image, image_t *original) {
     gpuErrchk(cudaFree(d_in));
     gpuErrchk(cudaFree(d_out));
 
-}
-
-extern "C"
-void cuda_image(image_t *input, image_t *output, image_t *original) {
-    cuda_grayscale(input, output);
-    cuda_contrast(output);
-    cuda_smoothing(output, original);
 }
