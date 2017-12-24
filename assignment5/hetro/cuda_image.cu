@@ -110,13 +110,14 @@ void smoothingKernel(int pixels, int width, int height, byte *input, byte *outpu
     // The weights of the neighbourhood values, the sum is 81
     byte T[25] = {1, 2, 3, 2, 1, 2, 4, 6, 4, 2, 3, 6, 9, 6, 3, 2, 4, 6, 4, 2, 1, 2, 3, 2, 1};
 
+    int image_pixels = width * height;
     if (thread_index < pixels) {
         unsigned int sum = 0;
         // Loop over the neighbourhood
         for (int i = 0; i < 25; i++) {
                 int row = i / 5;
                 int column = i % 5;
-                int index = mod(thread_index + column - 2  + (row - 2) * width, pixels);
+                int index = mod(thread_index + column - 2  + (row - 2) * width, image_pixels);
 
                 sum += T[row * 5 + column] * input[index];
         }
@@ -128,15 +129,17 @@ void smoothingKernel(int pixels, int width, int height, byte *input, byte *outpu
 extern "C"
 void cuda_smoothing(image_t *image, image_t *original) {
     int pixels = image->w * image->h;
+    // Add some extra read only pixels to the bottom pixels
+    int padding = image->w * 3;
     int threadBlockSize = 1024;
     int threadBlocks = ceil((float)pixels / (float)threadBlockSize);
     
     byte *d_in = NULL;
     byte *d_out = NULL;
     
-    gpuErrchk(cudaMalloc(&d_in, pixels * sizeof(byte)));
+    gpuErrchk(cudaMalloc(&d_in, (pixels + padding) * sizeof(byte)));
     gpuErrchk(cudaMalloc(&d_out, pixels * sizeof(byte))); 
-    gpuErrchk(cudaMemcpy(d_in, image->data, pixels * sizeof(byte), cudaMemcpyHostToDevice));
+    gpuErrchk(cudaMemcpy(d_in, image->data, (pixels + padding) * sizeof(byte), cudaMemcpyHostToDevice));
 
     smoothingKernel<<<threadBlocks, threadBlockSize>>>(pixels, original->w, original->h, d_in, d_out);
     gpuErrchk(cudaGetLastError());

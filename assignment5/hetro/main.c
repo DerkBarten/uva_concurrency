@@ -4,7 +4,6 @@
 
 
 int main(int argc, char *argv[]) {
-    fprintf(stderr, "hello?\n");
     if (argc > 2) {
         // Create two image objects on the stack
         image_t input;

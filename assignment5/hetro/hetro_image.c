@@ -25,16 +25,17 @@ void hetro_image(image_t *input, image_t *output) {
     output->h = input->h;
     output->n = 1;
 
-    split_image(0.5, input, &cuda_input, &openmp_input);
-    split_image(0.5, output, &cuda_output, &openmp_output);
+    float ratio = 0.75;
+    split_image(ratio, input, &cuda_input, &openmp_input);
+    split_image(ratio, output, &cuda_output, &openmp_output);
 
     cuda_grayscale(&cuda_input, &cuda_output);
     openmp_grayscale(&openmp_input, &openmp_output);
 
     int mean = image_mean(output);
 
-    cuda_contrast(&cuda_output, mean);
-    openmp_contrast(&openmp_output, mean);
+    //cuda_contrast(&cuda_output, mean);
+    //openmp_contrast(&openmp_output, mean);
 
     cuda_smoothing(&cuda_output, output);
     openmp_smoothing(&openmp_output, output);
