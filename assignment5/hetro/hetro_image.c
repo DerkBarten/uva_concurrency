@@ -29,6 +29,7 @@ void hetro_image(image_t *input, image_t *output) {
     split_image(ratio, input, &cuda_input, &openmp_input);
     split_image(ratio, output, &cuda_output, &openmp_output);
 
+    // TODO: NOT YET ASYNCHRONIOUS!
     cuda_grayscale(&cuda_input, &cuda_output);
     openmp_grayscale(&openmp_input, &openmp_output);
 
