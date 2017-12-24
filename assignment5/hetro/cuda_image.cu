@@ -5,11 +5,6 @@ extern "C" {
 #include "cuda_image.cuh"
 }
 
-static cudaEvent_t event_begin;
-static cudaEvent_t event_before_kernel;
-static cudaEvent_t event_after_kernel;
-static cudaEvent_t event_end;
-
 __global__ 
 void grayscaleKernel(int pixels, int channels, byte *input, byte *output){
     int i = blockIdx.x*blockDim.x + threadIdx.x;
@@ -37,21 +32,13 @@ void cuda_grayscale(image_t *input, image_t *output) {
     byte *d_in = NULL;
     byte *d_out = NULL;
 
-    CUDA_CHECK(cudaEventCreate, &event_begin);
-    CUDA_CHECK(cudaEventCreate, &event_before_kernel);
-    CUDA_CHECK(cudaEventCreate, &event_after_kernel);
-    CUDA_CHECK(cudaEventCreate, &event_end);
-
     CUDA_CHECK(cudaSetDevice, 0);
-    CUDA_CHECK(cudaEventRecord, event_begin, CUDA_DEFAULT_STREAM);
 
     CUDA_CHECK(cudaMalloc, &d_in, bytes * sizeof(byte)); 
     CUDA_CHECK(cudaMalloc, &d_out, pixels * sizeof(byte));
     CUDA_CHECK(cudaMemcpyAsync, d_in, input->data, bytes * sizeof(byte), cudaMemcpyHostToDevice);
 
-    CUDA_CHECK(cudaEventRecord, event_before_kernel, CUDA_DEFAULT_STREAM);
     grayscaleKernel<<<threadBlocks, threadBlockSize, CUDA_DEFAULT_STREAM>>>(pixels, input->n, d_in, d_out);
-    CUDA_CHECK(cudaEventRecord, event_after_kernel, CUDA_DEFAULT_STREAM);
     
     CUDA_CHECK(cudaGetLastError);
     
@@ -60,8 +47,6 @@ void cuda_grayscale(image_t *input, image_t *output) {
 
     CUDA_CHECK(cudaFree, d_in);
     CUDA_CHECK(cudaFree, d_out);
-
-    CUDA_CHECK(cudaEventRecord, event_end, CUDA_DEFAULT_STREAM);
 }
 
 __global__ 
@@ -93,28 +78,18 @@ void cuda_contrast(image_t *image, int mean) {
     
     byte *device = NULL;
 
-    CUDA_CHECK(cudaEventCreate, &event_begin);
-    CUDA_CHECK(cudaEventCreate, &event_before_kernel);
-    CUDA_CHECK(cudaEventCreate, &event_after_kernel);
-    CUDA_CHECK(cudaEventCreate, &event_end);
-
     CUDA_CHECK(cudaSetDevice, 0);
-    CUDA_CHECK(cudaEventRecord, event_begin, CUDA_DEFAULT_STREAM);
 
     CUDA_CHECK(cudaMalloc, &device, pixels * sizeof(byte)); 
     CUDA_CHECK(cudaMemcpyAsync, device, image->data, pixels * sizeof(byte), cudaMemcpyHostToDevice);
 
-    CUDA_CHECK(cudaEventRecord, event_before_kernel, CUDA_DEFAULT_STREAM);
     contrastKernel<<<threadBlocks, threadBlockSize, CUDA_DEFAULT_STREAM>>>(pixels, mean, device);
-    CUDA_CHECK(cudaEventRecord, event_after_kernel, CUDA_DEFAULT_STREAM);
     CUDA_CHECK(cudaGetLastError);
     
     CUDA_CHECK(cudaDeviceSynchronize);
-    CUDA_CHECK(cudaMemcpy, image->data, device, pixels * sizeof(byte), cudaMemcpyDeviceToHost);
+    CUDA_CHECK(cudaMemcpyAsync, image->data, device, pixels * sizeof(byte), cudaMemcpyDeviceToHost);
 
     CUDA_CHECK(cudaFree, device);
-
-    CUDA_CHECK(cudaEventRecord, event_end, CUDA_DEFAULT_STREAM);
 }
 
 __device__
@@ -157,27 +132,18 @@ void cuda_smoothing(image_t *image, image_t *original) {
     byte *d_in = NULL;
     byte *d_out = NULL;
     
-    CUDA_CHECK(cudaEventCreate, &event_begin);
-    CUDA_CHECK(cudaEventCreate, &event_before_kernel);
-    CUDA_CHECK(cudaEventCreate, &event_after_kernel);
-    CUDA_CHECK(cudaEventCreate, &event_end);
-
     CUDA_CHECK(cudaSetDevice, 0);
-    CUDA_CHECK(cudaEventRecord, event_begin, CUDA_DEFAULT_STREAM);
 
     CUDA_CHECK(cudaMalloc, &d_in, (pixels + padding) * sizeof(byte));
     CUDA_CHECK(cudaMalloc, &d_out, pixels * sizeof(byte)); 
-    CUDA_CHECK(cudaMemcpy, d_in, image->data, (pixels + padding) * sizeof(byte), cudaMemcpyHostToDevice);
+    CUDA_CHECK(cudaMemcpyAsync, d_in, image->data, (pixels + padding) * sizeof(byte), cudaMemcpyHostToDevice);
 
-    CUDA_CHECK(cudaEventRecord, event_before_kernel, CUDA_DEFAULT_STREAM);
     smoothingKernel<<<threadBlocks, threadBlockSize, CUDA_DEFAULT_STREAM>>>(pixels, original->w, original->h, d_in, d_out);
-    CUDA_CHECK(cudaEventRecord, event_after_kernel, CUDA_DEFAULT_STREAM);
     CUDA_CHECK(cudaGetLastError);
     
     CUDA_CHECK(cudaDeviceSynchronize);
-    CUDA_CHECK(cudaMemcpy, image->data, d_out, pixels * sizeof(byte), cudaMemcpyDeviceToHost);
+    CUDA_CHECK(cudaMemcpyAsync, image->data, d_out, pixels * sizeof(byte), cudaMemcpyDeviceToHost);
 
-    CUDA_CHECK(cudaEventRecord, event_end, CUDA_DEFAULT_STREAM);
 
     CUDA_CHECK(cudaFree, d_in);
     CUDA_CHECK(cudaFree, d_out);
