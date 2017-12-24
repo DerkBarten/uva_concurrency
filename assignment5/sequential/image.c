@@ -46,7 +46,7 @@ int grayscale(image_t *input, image_t *output) {
             byte b = input->data[(i * input->w + j) * input->n + 2];
 
             // Calculate the grayscale value
-            byte gray = (r + g + b) / 3;
+            byte gray = (float)r * 0.299f + (float)g * 0.587f + (float)b * 0.114f;
             // Set the corresponding output pixel to the grayscale vaue
             output->data[i * input->w + j] = gray;
         }

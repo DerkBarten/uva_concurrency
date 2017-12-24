@@ -25,7 +25,7 @@ void hetro_image(image_t *input, image_t *output) {
     output->h = input->h;
     output->n = 1;
 
-    float ratio = 0.75;
+    float ratio = 0.50;
     split_image(ratio, input, &cuda_input, &openmp_input);
     split_image(ratio, output, &cuda_output, &openmp_output);
 

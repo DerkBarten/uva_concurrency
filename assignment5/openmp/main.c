@@ -1,4 +1,8 @@
 #include "image.h"
+#include "omp.h"
+#include "timer.h"
+
+#include <stdio.h>
 
 int main(int argc, char *argv[]) {
     if (argc > 2) {
@@ -6,10 +10,19 @@ int main(int argc, char *argv[]) {
         image_t input;
         image_t output;
 
+        omp_set_dynamic(0);
+        omp_set_num_threads(8);
+
         load_image(argv[1], &input);
-        openMP_grayscale(&input, &output);
-        openMP_contrast(&output);
-        openMP_smoothing(&output); 
+
+        timer_start();
+        openmp_grayscale(&input, &output);
+        openmp_contrast(&output);
+        openmp_smoothing(&output);
+         
+        double t = timer_end();
+        fprintf(stderr, "time openmp: %f\n", t);
+
         save_image(argv[2], &output);
 
         // Free the data array in the image object

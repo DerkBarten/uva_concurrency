@@ -28,7 +28,7 @@ void unload_image(image_t *image) {
 }
 
 /* Convert a rgb image to a grayscale image */
-int openMP_grayscale(image_t *input, image_t *output) {
+int openmp_grayscale(image_t *input, image_t *output) {
     if (input->n != 3 && input->n != 4) {
 
         printf("number of channels: %d", input->n);
@@ -43,10 +43,10 @@ int openMP_grayscale(image_t *input, image_t *output) {
     output->h = input->h;
     output->n = 1;
 
-    timer_start();
+
     int i, j;
     byte r,g,b,gray;
-    #pragma omp parallel for private(r,g,b,gray,j) shared(output)
+    #pragma omp parallel for collapse(2) private(r,g,b,gray,j) shared(output)
     for (i = 0; i < input->h; i++) {
         for (j = 0; j < input->w; j++) {
              r = input->data[(i * input->w + j) * input->n];
@@ -54,17 +54,15 @@ int openMP_grayscale(image_t *input, image_t *output) {
              b = input->data[(i * input->w + j) * input->n + 2];
 
             // Calculate the grayscale value
-             gray = (r + g + b) / 3;
+            gray = (float)r * 0.299f + (float)g * 0.587f + (float)b * 0.114f;
             // Set the corresponding output pixel to the grayscale value
             output->data[i * input->w + j] = gray;
         }
-    } 
-    time = timer_end();
-    printf("openmp_grayscale took %g seconds\n", time);
+    }
     return 1;
 }
 
-int openMP_contrast(image_t *image) {
+int openmp_contrast(image_t *image) {
     if (image->n != 1) {
         return 0;
     }
@@ -72,15 +70,13 @@ int openMP_contrast(image_t *image) {
     int brightness = 0;
     int size = image->w * image->h;
     int i;
-    #pragma omp parallel for reduction(+:brightness)
+
     for (i = 0; i < size; i++) {
         brightness += image->data[i];
     }
     float mean = floor((float)brightness / (float)size) / 255.0;
     float value;
 
-    // TODO: might speedup if no conversions inside loop
-    timer_start();
     #pragma omp parallel for private(value) firstprivate(image)
     for (i = 0; i < size; i++) {
         value = image->data[i] / 255.0; 
@@ -91,8 +87,6 @@ int openMP_contrast(image_t *image) {
             image->data[i] = 0;
         }
     }
-    time = timer_end();
-    printf("openmp_constrast took %g seconds\n", time);
 }
 
 int mod(int a, int b)
@@ -101,7 +95,7 @@ int mod(int a, int b)
     return r < 0 ? r + b : r;
 }
 
-int openMP_smoothing(image_t *image) {
+int openmp_smoothing(image_t *image) {
     byte T[5][5] = {{1, 2, 3, 2, 1},
                              {2, 4, 6, 4, 2},
                              {3, 6, 9, 6, 3},
@@ -110,8 +104,8 @@ int openMP_smoothing(image_t *image) {
     int i,j,k,l;
     double time;
     unsigned int sum;
-    timer_start();
-    #pragma omp parallel for private(j,k,l) firstprivate(image) reduction(+:sum)
+    
+    #pragma omp parallel for collapse(2) private(j,k,l, sum) firstprivate(image)
     for ( i = 0; i < image->h; i++) {
         for ( j = 0; j < image->w; j++) {    
             sum = 0;
@@ -126,7 +120,4 @@ int openMP_smoothing(image_t *image) {
             image->data[i * image->w + j] = sum / 81;
         }
     }
-
-    time = timer_end();
-    printf("openmp_smoothing took %g seconds\n", time);
 }
