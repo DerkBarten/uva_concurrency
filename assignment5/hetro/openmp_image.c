@@ -78,9 +78,10 @@ int openmp_smoothing(image_t *image, image_t *original) {
                 for (l = 0; l < 5; l++) {
                     // reduction 
                     sum += T[k][l] * 
-                    image->data[mod(i + k - 2, original->h) * original->w  + mod(j + l - 2, original->w)];
+                    image->data[((i + k - 2) % original->h) * original->w  + mod(j + l - 2, original->w)];
                 }
             }
+
             image->data[i * original->w + j] = sum / 81;
         }
     }

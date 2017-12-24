@@ -34,8 +34,8 @@ void hetro_image(image_t *input, image_t *output) {
 
     int mean = image_mean(output);
 
-    //cuda_contrast(&cuda_output, mean);
-    //openmp_contrast(&openmp_output, mean);
+    cuda_contrast(&cuda_output, mean);
+    openmp_contrast(&openmp_output, mean);
 
     cuda_smoothing(&cuda_output, output);
     openmp_smoothing(&openmp_output, output);
