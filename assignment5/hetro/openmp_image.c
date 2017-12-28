@@ -1,4 +1,5 @@
 #include "image.h"
+#include "openmp_image.h"
 #include <math.h>
 #include <stdio.h>
 #include "omp.h"

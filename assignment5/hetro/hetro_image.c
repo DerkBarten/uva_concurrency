@@ -31,14 +31,14 @@ void hetro_image(image_t *input, image_t *output) {
 
     // TODO: NOT YET ASYNCHRONIOUS!
     // rewrite cuda_image, look at examples for guidance
-    cuda_grayscale(&cuda_input, &cuda_output);
-    openmp_grayscale(&openmp_input, &openmp_output);
+    cuda_grayscale(&cuda_input, &cuda_output, &openmp_input, &openmp_output);
+    //openmp_grayscale(&openmp_input, &openmp_output);
 
     int mean = image_mean(output);
 
-    cuda_contrast(&cuda_output, mean);
-    openmp_contrast(&openmp_output, mean);
+    cuda_contrast(&cuda_output, &openmp_output, mean);
+    //openmp_contrast(&openmp_output, mean);
 
-    cuda_smoothing(&cuda_output, output);
-    openmp_smoothing(&openmp_output, output);
+    cuda_smoothing(&cuda_output, &openmp_output, output);
+    //openmp_smoothing(&openmp_output, output);
 }

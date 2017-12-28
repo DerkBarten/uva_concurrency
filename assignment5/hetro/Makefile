@@ -27,7 +27,7 @@ all: $(C_OBJ_FILES) $(CU_OBJ_FILES) $(PROGRAM_NAME)
 %.o: %.cu
 	$(NVCC) $(CU_FLAGS) -c $< -o $@
 
-$(PROGRAM_NAME): $(C_OBJ_FILES) $(CU_OBJ_FILES)
+$(PROGRAM_NAME): $(C_OBJ_FILES) $(CU_OBJ_FILES)  
 	$(NVCC) $(CU_FLAGS) $(LINKER_FLAGS) $^ -o $@
 
 run: $(PROGRAM_NAME)

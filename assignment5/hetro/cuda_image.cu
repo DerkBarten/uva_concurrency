@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "image.h"
+#include "openmp_image.h"
 
 extern "C" {
 #include "cuda_image.cuh"
@@ -22,7 +23,7 @@ void grayscaleKernel(int pixels, int channels, byte *input, byte *output){
 
 /* Writes the results to image_t output */
 extern "C"
-void cuda_grayscale(image_t *input, image_t *output) {
+void cuda_grayscale(image_t *input, image_t *output, image_t *openmp_input, image_t *openmp_output) {
     // How many bytes is the image
     int pixels = input->w * input->h;
     int bytes = pixels * input->n;
@@ -39,8 +40,8 @@ void cuda_grayscale(image_t *input, image_t *output) {
     CUDA_CHECK(cudaMemcpyAsync, d_in, input->data, bytes * sizeof(byte), cudaMemcpyHostToDevice);
 
     grayscaleKernel<<<threadBlocks, threadBlockSize, CUDA_DEFAULT_STREAM>>>(pixels, input->n, d_in, d_out);
-    
-    CUDA_CHECK(cudaGetLastError);
+    openmp_grayscale(openmp_input, openmp_output);
+    //CUDA_CHECK(cudaGetLastError);
     
     CUDA_CHECK(cudaDeviceSynchronize);
     CUDA_CHECK(cudaMemcpyAsync, output->data, d_out, pixels * sizeof(byte), cudaMemcpyDeviceToHost);
@@ -66,7 +67,7 @@ void contrastKernel(int pixels, int mean, byte* data) {
 }
 
 extern "C"
-void cuda_contrast(image_t *image, int mean) {
+void cuda_contrast(image_t *image, image_t *openmp_input,int mean) {
     // Only use contrast on grayscale images
     if (image->n != 1) {
         return;
@@ -84,7 +85,9 @@ void cuda_contrast(image_t *image, int mean) {
     CUDA_CHECK(cudaMemcpyAsync, device, image->data, pixels * sizeof(byte), cudaMemcpyHostToDevice);
 
     contrastKernel<<<threadBlocks, threadBlockSize, CUDA_DEFAULT_STREAM>>>(pixels, mean, device);
-    CUDA_CHECK(cudaGetLastError);
+    
+    //CUDA_CHECK(cudaGetLastError);
+    openmp_contrast(openmp_input, mean);
     
     CUDA_CHECK(cudaDeviceSynchronize);
     CUDA_CHECK(cudaMemcpyAsync, image->data, device, pixels * sizeof(byte), cudaMemcpyDeviceToHost);
@@ -122,7 +125,7 @@ void smoothingKernel(int pixels, int width, int height, byte *input, byte *outpu
 
 // Need to add extra image for boundary conditions
 extern "C"
-void cuda_smoothing(image_t *image, image_t *original) {
+void cuda_smoothing(image_t *image, image_t *openmp_input, image_t *original) {
     int pixels = image->w * image->h;
     // Add some extra read only pixels to the bottom pixels
     int padding = image->w * 3;
@@ -139,8 +142,9 @@ void cuda_smoothing(image_t *image, image_t *original) {
     CUDA_CHECK(cudaMemcpyAsync, d_in, image->data, (pixels + padding) * sizeof(byte), cudaMemcpyHostToDevice);
 
     smoothingKernel<<<threadBlocks, threadBlockSize, CUDA_DEFAULT_STREAM>>>(pixels, original->w, original->h, d_in, d_out);
-    CUDA_CHECK(cudaGetLastError);
-    
+    //CUDA_CHECK(cudaGetLastError);
+    openmp_smoothing(openmp_input, original);
+
     CUDA_CHECK(cudaDeviceSynchronize);
     CUDA_CHECK(cudaMemcpyAsync, image->data, d_out, pixels * sizeof(byte), cudaMemcpyDeviceToHost);
 
